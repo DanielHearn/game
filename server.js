@@ -38,11 +38,12 @@ wsServer.on('request', function(request) {
   connection.on('message', function(message) {
     if (message.type === 'utf8') { // accept only text
       const msg = message.utf8Data
-      console.log('Received Message: ' + msg);
-      for (let client in clients) {
-        connection.sendUTF('Message received')
+      console.log('Received Message: ' + msg)
+      for (let client of clients) {
+        console.log(client)
+        connection.sendUTF('A user sent: ' + msg)
       }
-      connection.sendUTF('A user sent: ' + msg)
+      connection.sendUTF('Message received')
     }
   });
   // user disconnected
