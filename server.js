@@ -1,29 +1,28 @@
-"use strict";
+'use strict'
 process.title = 'node-chat'
 const webSocketsServerPort = 1337
 const webSocketServer = require('websocket').server
 const http = require('http')
-let history = [ ]
-let clients = [ ]
+let history = []
+let clients = []
 
-const server = http.createServer(function(request, response) {})
-server.listen(webSocketsServerPort, function() {
-  console.log((new Date()) + " Server is listening on port "
-      + webSocketsServerPort);
-});
+const server = http.createServer(function (request, response) {})
+server.listen(webSocketsServerPort, function () {
+  console.log(new Date() + ' Server is listening on port ' + webSocketsServerPort)
+})
 
 let wsServer = new webSocketServer({
-  httpServer: server
-});
+  httpServer: server,
+})
 
-wsServer.on('request', function(request) {
+wsServer.on('request', function (request) {
   console.log(`${new Date()} Connection from origin ${request.origin}`)
 
-  const connection = request.accept(null, request.origin);
+  const connection = request.accept(null, request.origin)
   clients.push(createUser(connection))
   console.log(`Clients: ${clients.length}`)
-  
-  connection.on('message', function(message) {
+
+  connection.on('message', function (message) {
     if (message.type === 'utf8') {
       const msg = message.utf8Data
       console.log(`Received Message: ${msg}`)
@@ -34,7 +33,7 @@ wsServer.on('request', function(request) {
     }
   })
 
-  connection.on('close', function(connection) {
+  connection.on('close', function (connection) {
     clients = clients.filter((client) => client.remoteAddress !== connection.remoteAddress)
     console.log(`Clients: ${clients.length}`)
   })
@@ -46,7 +45,7 @@ function createUser(connection) {
     name: 'JEFF',
     pos: {
       x: 0,
-      y: 0
-    }
+      y: 0,
+    },
   }
 }
