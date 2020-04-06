@@ -26,27 +26,41 @@ var wsServer = new webSocketServer({
   // http://tools.ietf.org/html/rfc6455#page-6
   httpServer: server
 });
+
 // This callback function is called every time someone
 // tries to connect to the WebSocket server
 wsServer.on('request', function(request) {
-  console.log((new Date()) + ' Connection from origin '
-      + request.origin + '.');
+  console.log(`${new Date()} Connection from origin ${request.origin}`)
 
-  var connection = request.accept(null, request.origin);
-  clients.push(connection)
-
+  const connection = request.accept(null, request.origin);
+  clients.push(createUser(connection))
+  console.log(`Clients: ${clients.length}`)
+  
   connection.on('message', function(message) {
-    if (message.type === 'utf8') { // accept only text
+    if (message.type === 'utf8') {
       const msg = message.utf8Data
-      console.log('Received Message: ' + msg)
+      console.log(`Received Message: ${msg}`)
       for (let client of clients) {
-        client.sendUTF('A user sent: ' + msg)
+        client.sendUTF(`A user sent: ${msg}`)
       }
       connection.sendUTF('Message received')
     }
   });
   // user disconnected
   connection.on('close', function(connection) {
-    console.log(" Peer " + connection.remoteAddress + " disconnected.");
+    clients = clients.filter((client) => client.remoteAddress !== connection.remoteAddress)
+    console.log(`Clients: ${clients.length}`)
   });
 });
+
+
+function createUser(connection) {
+  return {
+    connection: connection,
+    name: 'JEFF',
+    pos: {
+      x: 0,
+      y: 0
+    }
+  }
+}
