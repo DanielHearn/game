@@ -40,8 +40,7 @@ wsServer.on('request', function(request) {
       const msg = message.utf8Data
       console.log('Received Message: ' + msg)
       for (let client of clients) {
-        console.log(client)
-        connection.sendUTF('A user sent: ' + msg)
+        client.sendUTF('A user sent: ' + msg)
       }
       connection.sendUTF('Message received')
     }
