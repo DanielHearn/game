@@ -17,13 +17,13 @@ const sendButton = document.querySelector('#send')
 const clientPlayers = [ ]; // List of local instances of other clients' players
 const playersToUpdate = [ ];
 const playerMessages = [ ];
-const playerSpeed = 2.0;
+const playerSpeed = 4.0;
 var playerId = null;
 var positionX = 0;
 var positionY = 0;
 let activeKeys = {}
 let initialised = false
-const gameSpeed = 60;
+const gameSpeed = 20;
 
 window.onload = (event) => {
   init()
@@ -35,12 +35,7 @@ function send(msg) {
 }
 
 function iterate() {
-  window.requestAnimationFrame(interval)
-}
-
-function interval() {
   move()
-  render()
   setTimeout(() => { iterate() }, 1000/gameSpeed)
 }
 
@@ -53,6 +48,8 @@ function render() {
     const y = client.y
     drawPlayer(x, y)
   }
+
+  window.requestAnimationFrame(render)
 }
 
 function sendInitRequest() {
@@ -95,6 +92,7 @@ function init() {
         playerId = data.data.id
         initialised = true
         iterate()
+        render()
       }
       if(initialised) {
         updateClientPlayer(data.data);
