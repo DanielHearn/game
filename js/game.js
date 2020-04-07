@@ -81,11 +81,7 @@ function init() {
       drawPlayer(x, y)
     }
   };
-
-
   initCanvas()
-  gameLoop()
-
   sendButton.addEventListener('click', () => {
     send('Random text')
   })
@@ -95,6 +91,10 @@ function move(){
   send(JSON.stringify({id:playerId, x:positionX, y:positionY}))
 }
 
+/*
+  This method takes the player data, check's if that player is currently on the local players map,
+  if not, then just add it, and keep track. Otherwise, update that players' position.
+*/
 function updateClientPlayer(data) {
   var clientPlayerExists = false;
   var clientPlayerID = data.id;
@@ -102,7 +102,6 @@ function updateClientPlayer(data) {
     var client = clientPlayers[index];
 
     if (client.id == clientPlayerID) {
-      console.log("TS");
       clientPlayerExists = true;
       var clientPlayerX = data.x;
       var clientPlayerY = data.y;
@@ -129,10 +128,6 @@ function initCanvas() {
   ctx.fillRect(0, 0, 500, 500)
 
 }
-
-function gameLoop() {
-}
-
 
 function drawPlayer(x, y) {
   ctx.fillStyle = playerColour
