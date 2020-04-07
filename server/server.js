@@ -7,7 +7,7 @@ const webSocketServer = require('websocket').server
 const http = require('http')
 let history = []
 let clients = []
-let sendBackClients = []
+
 const server = http.createServer(function (request, response) {})
 const wsServer = new webSocketServer({
   httpServer: server,
@@ -29,9 +29,8 @@ wsServer.on('request', function (request) {
       var msg = message.utf8Data
       var data = JSON.parse(msg);
       console.log(`Received Message: ${msg}`)
-      console.log(data.id);
       for (const client of clients) {
-        if (data.id == null) {
+        if (data.id == null && data.type == "PLAYER") {
             data.id = uuid();
         }
         console.log(data);

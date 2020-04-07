@@ -16,6 +16,8 @@ const playerSize = 32
 const statusElement = document.querySelector('#connection_status')
 const sendButton = document.querySelector('#send')
 const clientPlayers = [ ]; // List of local instances of other clients' players
+const playersToUpdate = [ ];
+const playerMessages = [ ];
 const playerSpeed = 2.0;
 var playerId = null;
 var positionX = 0;
@@ -73,24 +75,34 @@ function init() {
     }
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, 500, 500);
-    for (const client of clientPlayers) {
-
-      const x = client.x
-      const y = client.y
-      console.log(client);
-      drawPlayer(x, y)
+    let x;
+    let y;
+    if (client.type == "PLAYER") {  
+      for (const client of clientPlayers) {
+        x = client.x
+        y = client.y
+      }
+    } else if (client.type == "MESSAGE") {
+      console.log("FUCK");
+      playerMessages.push({id:client.id, message:client.message});
     }
+
+      drawPlayer(x, y, client.id)
+    
   };
   initCanvas()
   sendButton.addEventListener('click', () => {
-    send('Random text')
+    send(JSON.stringify({type:"MESSAGE", message:"Random text", id:playerId}));
   })
 }
 
 function move(){
-  send(JSON.stringify({id:playerId, x:positionX, y:positionY}))
+  send(JSON.stringify({type:"PLAYER", id:playerId, x:positionX, y:positionY}))
 }
 
+function lerp (start, end, amt){
+  return (1-amt)*start+amt*end
+}
 /*
   This method takes the player data, check's if that player is currently on the local players map,
   if not, then just add it, and keep track. Otherwise, update that players' position.
@@ -100,7 +112,6 @@ function updateClientPlayer(data) {
   var clientPlayerID = data.id;
   for (const index in clientPlayers) {
     var client = clientPlayers[index];
-
     if (client.id == clientPlayerID) {
       clientPlayerExists = true;
       var clientPlayerX = data.x;
@@ -129,8 +140,18 @@ function initCanvas() {
 
 }
 
-function drawPlayer(x, y) {
+function drawPlayer(x, y, id) {
   ctx.fillStyle = playerColour
-  console.log("test")
+  console.log(playerMessages)
   ctx.fillRect(x, y, playerSize, playerSize)
+
+  for (const index in playerMessages) {
+    let msg = playerMessages[index];
+    console.log(msg, "TEE");
+    if (msg.id == id) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(msg.message, x, y-(index*10));
+    }
+  }
+
 }
