@@ -5,7 +5,7 @@ const webSocketServer = require('websocket').server
 const http = require('http')
 let history = []
 let clients = []
-
+let sendBackClients = []
 const server = http.createServer(function (request, response) {})
 server.listen(webSocketsServerPort, function () {
   console.log(new Date() + ' Server is listening on port ' + webSocketsServerPort)
@@ -25,7 +25,8 @@ wsServer.on('request', function (request) {
   connection.on('message', function (message) {
     if (message.type === 'utf8') {
       const msg = message.utf8Data
-      console.log(`Received Message: ${msg}`)
+      sendBackClients.push(msg);
+      console.log(`Received Message: ${sendBackClients}`)
       for (const client of clients) {
         client.connection.sendUTF(`${msg}`)
       }

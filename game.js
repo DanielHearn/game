@@ -14,7 +14,7 @@ connection.onerror = function (error) {
 
 connection.onmessage = function (message) {
   console.log(message.data)
-  var clients = JSON.parse(message.data.clients);
+  var clients = JSON.parse(message.data);
 
   for (const client of clients) {
     var x = client.pos.x;
