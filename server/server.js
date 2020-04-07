@@ -26,17 +26,29 @@ wsServer.on('request', function (request) {
 
   connection.on('message', function (message) {
     if (message.type === 'utf8') {
-      var msg = message.utf8Data
-      var data = JSON.parse(msg);
+      const msg = message.utf8Data
+      const data = JSON.parse(msg);
+      let reply = ''
       console.log(`Received Message: ${msg}`)
-      console.log(data.id);
-      for (const client of clients) {
-        if (data.id == null) {
-            data.id = uuid();
+      if (data.type) {
+        const messageType = data.type
+        if (messageType === 'init_player') {
+          const playerID = uuid()
+          reply = JSON.stringify({
+            data: {
+              id: playerID,
+              x: 0,
+              y: 0
+            },
+            type: 'initialised_player'
+          });
+          console.log(reply)
+          broadcast(reply)
+        } else if (messageType === 'move') {
+          reply = JSON.stringify(data);
+          console.log(reply)
+          broadcast(reply)
         }
-        console.log(data);
-        msg = JSON.stringify(data);
-        client.connection.sendUTF(`${msg}`)
       }
       //connection.sendUTF('Message received')
     }
@@ -47,6 +59,12 @@ wsServer.on('request', function (request) {
     console.log(`Clients: ${clients.length}`)
   })
 })
+
+function broadcast(data) {
+  for (const client of clients) {
+    client.connection.sendUTF(`${data}`)
+  }
+}
 
 function createUser(connection) {
   return {

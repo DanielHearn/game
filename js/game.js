@@ -20,6 +20,7 @@ var playerId = null;
 var positionX = 0;
 var positionY = 0;
 let activeKeys = {}
+let initialised = false
 const gameSpeed = 60;
 
 window.onload = (event) => {
@@ -52,6 +53,12 @@ function render() {
   }
 }
 
+function sendInitRequest() {
+  send(JSON.stringify({
+    type: 'init_player'
+  }))
+}
+
 function init() {
   console.log('Initialisation')
   connection = new WebSocket(`ws://${serverIP}:${serverPort}`)
@@ -70,7 +77,7 @@ function init() {
     console.log('Connected')
     connected = true
     showConnectionStatus()
-    iterate()
+    sendInitRequest()
   }
   
   connection.onerror = function (error) {
@@ -78,10 +85,20 @@ function init() {
   }
   
   connection.onmessage = function (message) {
-    const client = JSON.parse(message.data)
-    updateClientPlayer(client);
-    if (playerId === null) {
-      playerId = client.id;
+    const data = JSON.parse(message.data)
+    console.log('Received: ' + message.data)
+    try {
+      const messageType = data.type
+      if (messageType === 'initialised_player') {
+        playerId = data.data.id
+        initialised = true
+        iterate()
+      }
+      if(initialised) {
+        updateClientPlayer(data.data);
+      }
+    } catch (error) {
+      console.error(error)
     }
   };
 
@@ -132,7 +149,7 @@ function move(){
     positionX = newX
     positionY = newY
   
-    send(JSON.stringify({id:playerId, x:positionX, y:positionY}))
+    send(JSON.stringify({type: 'move', data: {id:playerId, x:positionX, y:positionY}}))
   }
 }
 
@@ -148,10 +165,12 @@ function updateClientPlayer(data) {
 
     if (client.id === clientPlayerID) {
       clientPlayerExists = true;
-      const clientPlayerX = data.x;
-      const clientPlayerY = data.y;
-      client.x = clientPlayerX;
-      client.y = clientPlayerY;
+      if (data.x && data.y) {
+        const clientPlayerX = data.x;
+        const clientPlayerY = data.y;
+        client.x = clientPlayerX;
+        client.y = clientPlayerY;
+      }
       break;
     }
   }
