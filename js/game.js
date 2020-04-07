@@ -15,6 +15,8 @@ const playerSize = 32
 const statusElement = document.querySelector('#connection_status')
 const sendButton = document.querySelector('#send')
 const clientPlayers = [ ]; // List of local instances of other clients' players
+const playersToUpdate = [ ];
+const playerMessages = [ ];
 const playerSpeed = 2.0;
 var playerId = null;
 var positionX = 0;
@@ -104,7 +106,7 @@ function init() {
 
   initCanvas()
   sendButton.addEventListener('click', () => {
-    send('Random text')
+    send(JSON.stringify({type:"MESSAGE", message:"Random text", id:playerId}));
   })
 }
 
@@ -153,6 +155,9 @@ function move(){
   }
 }
 
+function lerp (start, end, amt){
+  return (1-amt)*start+amt*end
+}
 /*
   This method takes the player data, check's if that player is currently on the local players map,
   if not, then just add it, and keep track. Otherwise, update that players' position.
@@ -192,7 +197,17 @@ function initCanvas() {
   ctx.fillRect(0, 0, 500, 500)
 }
 
-function drawPlayer(x, y) {
+function drawPlayer(x, y, id) {
   ctx.fillStyle = playerColour
   ctx.fillRect(x, y, playerSize, playerSize)
+
+  for (const index in playerMessages) {
+    let msg = playerMessages[index];
+    console.log(msg, "TEE");
+    if (msg.id == id) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(msg.message, x, y-(index*10));
+    }
+  }
+
 }

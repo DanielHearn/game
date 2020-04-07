@@ -7,7 +7,7 @@ const webSocketServer = require('websocket').server
 const http = require('http')
 let history = []
 let clients = []
-let sendBackClients = []
+
 const server = http.createServer(function (request, response) {})
 const wsServer = new webSocketServer({
   httpServer: server,
