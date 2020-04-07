@@ -10,17 +10,19 @@ let canvas
 let ctx
 let connected = false
 
-const playerColour = "#FF0000"
 const playerSize = 32
 const statusElement = document.querySelector('#connection_status')
 const sendButton = document.querySelector('#send')
-let clientPlayers = [ ]; // List of local instances of other clients' players
 const playersToUpdate = [ ];
 const playerMessages = [ ];
 const playerSpeed = 4.0;
-var playerId = null;
-var positionX = 0;
-var positionY = 0;
+const mapSize = 500;
+let clientPlayers = [ ]; // List of local instances of other clients' players
+let playerId = null;
+let positionX = 0;
+let positionY = 0;
+let playerColour = "#FF0000"
+let playerName = ''
 let activeKeys = {}
 let initialised = false
 const gameSpeed = 20;
@@ -40,20 +42,17 @@ function iterate() {
 }
 
 function render() {
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = '#666';
   ctx.fillRect(0, 0, 500, 500);
 
-  // drawPlayer(positionX, positionY)
-  // console.log(clientPlayers);
-  // for (const client of clientPlayers) {
-  //   if (client.id !== playerId) {
-  //     const x = client.x
-  //     const y = client.y
-  //     drawPlayer(x, y)
-  //   }
-  // }
+  drawPlayer(positionX, positionY, playerColour, playerName)
+
   for (const client of clientPlayers) {
-    drawPlayer(client.x, client.y);
+    if (client.id !== playerId) {
+      const x = client.x
+      const y = client.y
+      drawPlayer(x, y, client.colour, client.name)
+    }
   }
   window.requestAnimationFrame(render)
 }
@@ -90,20 +89,23 @@ function init() {
   }
   
   connection.onmessage = function (message) {
-    const data = JSON.parse(message.data)
-    console.log('Received: ' + message.data)
     try {
+      const data = JSON.parse(message.data)
+      console.log('Received: ' + message.data)
       const messageType = data.type
       if (!initialised && messageType === 'initialised_player') {
-        playerId = data.data.id
+        playerId = data.data.user.id
+        playerColour = data.data.user.colour
+        playerName = data.data.user.name
+        clientPlayers = data.data.players
         initialised = true
         iterate()
         render()
-      }
+      } 
       if(initialised) {
         console.log(data);
-        if (data.type === 'all_move' ) {
-          updateClientPlayer(data.data);
+        if (data.type === 'players' ) {
+          clientPlayers = data.data;
         }
       }
     } catch (error) {
@@ -155,45 +157,38 @@ function move(){
     alreadyMoving = true
   }
   if (positionX !== newX || positionY !== newY) {
-    positionX = newX
-    positionY = newY
+    if (!checkWallCollision(newX, newY, mapSize) && !checkPlayerCollision(newX, newY, clientPlayers)) {
+      positionX = newX
+      positionY = newY
+    }
   
     send(JSON.stringify({type: 'move', data: {id:playerId, x:positionX, y:positionY}}))
   }
 }
 
-function lerp (start, end, amt){
-  return (1-amt)*start+amt*end
+function checkWallCollision(newX, newY, mapSize) {
+  if (newX < 0 || 
+      newY < 0 || 
+      newX >= mapSize || 
+      newY >= mapSize) {
+    return true
+  } else {
+    return false
+  }
 }
-/*
-  This method takes the player data, check's if that player is currently on the local players map,
-  if not, then just add it, and keep track. Otherwise, update that players' position.
-*/
-function updateClientPlayer(data) {
-  clientPlayers = data;
-  console.log("SH", clientPlayers);
-  // console.log(data, "FUCK");
-  // let clientPlayerExists = false;
-  // const clientPlayerID = data.id;
-  // for (const index in clientPlayers) {
-  //   const client = clientPlayers[index];
 
-  //   if (client.id === clientPlayerID) {
-  //     clientPlayerExists = true;
-  //     if (data.x && data.y) {
-  //       const clientPlayerX = data.x;
-  //       const clientPlayerY = data.y;
-  //       client.x = clientPlayerX;
-  //       client.y = clientPlayerY;
-  //     }
-  //     // break;
-  //   }
-  // }
-
-  // if (!clientPlayerExists) {
-  //   clientPlayers.push({id:clientPlayerID, x:data.x, y:data.y});
-  //   console.log("ADDING NEW PLAYER", clientPlayers);
-  // }
+function checkPlayerCollision(newX, newY, players) {
+  for (let player of players) {
+    if (playerId !== player.id) {
+      if (newX < player.x + playerSize &&
+        newX + playerSize > player.x &&
+        newY < player.y + playerSize &&
+        playerSize + newY > player.y) {
+        return true
+      } 
+    }     
+  }
+  return false
 }
 
 function showConnectionStatus() {
@@ -207,9 +202,12 @@ function initCanvas() {
   ctx.fillRect(0, 0, 500, 500)
 }
 
-function drawPlayer(x, y, id) {
-  ctx.fillStyle = playerColour
+function drawPlayer(x, y, colour, name, id) {
+  ctx.fillStyle = colour
   ctx.fillRect(x, y, playerSize, playerSize)
+  ctx.fillStyle = '#FFFFFF';
+  const nameOffset = name.length > 10 ? name.length*2 : 0
+  ctx.fillText(name, x-nameOffset, y-6);
 
   for (const index in playerMessages) {
     let msg = playerMessages[index];

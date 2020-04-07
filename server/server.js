@@ -7,7 +7,15 @@ const webSocketServer = require('websocket').server
 const http = require('http')
 let history = []
 let clients = []
-let allPlayers = []
+let users = []
+const playerColours = [
+  'red',
+  'blue',
+  'green',
+  'purple',
+  'pink'
+]
+
 const server = http.createServer(function (request, response) {})
 const wsServer = new webSocketServer({
   httpServer: server,
@@ -34,26 +42,37 @@ wsServer.on('request', function (request) {
         const messageType = data.type
         if (messageType === 'init_player') {
           const playerID = uuid()
-          var d = {
+          const newUser = {
             id: playerID,
+            colour: randomPlayerColour(),
+            name: playerID,
             x: 0,
             y: 0
-          };
+          }
           reply = JSON.stringify({
-            data: d,
+            data: {
+              user: newUser,
+              players: users
+            },
             type: 'initialised_player'
           });
-          allPlayers.push(d);
-          // console.log(data)
+          users.push(newUser)
+          console.log(reply)
           broadcast(reply)
         } else if (messageType === 'move') {
-          reply = JSON.stringify(data);
-          updateAllPlayers(data);
-          var allMoveData = {};
-          allMoveData.data = allPlayers;
-          allMoveData.type = "all_move";
-          console.log(allMoveData)
-          broadcast(JSON.stringify(allMoveData))
+          for (let user of users) {
+            if (user.id === data.data.id) {
+              user.x = data.data.x
+              user.y = data.data.y
+              break
+            }
+          }
+          reply = JSON.stringify({
+            data: users,
+            type: 'players'
+          });
+          console.log(reply)
+          broadcast(reply)
         }
       }
       //connection.sendUTF('Message received')
@@ -65,16 +84,11 @@ wsServer.on('request', function (request) {
     console.log(`Clients: ${clients.length}`)
   })
 })
-function updateAllPlayers(data) {
-  for (let index in allPlayers) {
-    var player = allPlayers[index];
 
-    if (player.id === data.data.id) {
-      allPlayers[index].x = data.data.x;
-      allPlayers[index].y = data.data.y;
-    }
-  }
+function randomPlayerColour() {
+  return playerColours[Math.floor(Math.random() * playerColours.length)]
 }
+
 function broadcast(data) {
   for (const client of clients) {
     client.connection.sendUTF(`${data}`)
