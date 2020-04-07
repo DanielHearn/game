@@ -11,5 +11,8 @@
   "license": "ISC",
   "devDependencies": {
     "websocket": "^1.0.31"
+  },
+  "dependencies": {
+    "uuid": "^7.0.3"
   }
 }

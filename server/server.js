@@ -25,8 +25,7 @@ wsServer.on('request', function (request) {
   connection.on('message', function (message) {
     if (message.type === 'utf8') {
       const msg = message.utf8Data
-      sendBackClients.push(msg);
-      console.log(`Received Message: ${sendBackClients}`)
+      console.log(`Received Message: ${msg}`)
       for (const client of clients) {
         client.connection.sendUTF(`${msg}`)
       }
