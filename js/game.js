@@ -1,8 +1,8 @@
 
 window.WebSocket = window.WebSocket || window.MozWebSocket
 
-const serverIP = '86.151.188.17'
-//const serverIP = '192.168.0.27';
+// const serverIP = '86.151.188.17'
+const serverIP = '192.168.0.27';
 
 const serverPort = '1337'
 let connection = null
@@ -14,7 +14,7 @@ const playerColour = "#FF0000"
 const playerSize = 32
 const statusElement = document.querySelector('#connection_status')
 const sendButton = document.querySelector('#send')
-const clientPlayers = [ ]; // List of local instances of other clients' players
+let clientPlayers = [ ]; // List of local instances of other clients' players
 const playersToUpdate = [ ];
 const playerMessages = [ ];
 const playerSpeed = 4.0;
@@ -43,16 +43,18 @@ function render() {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, 500, 500);
 
-  drawPlayer(positionX, positionY)
-
+  // drawPlayer(positionX, positionY)
+  // console.log(clientPlayers);
+  // for (const client of clientPlayers) {
+  //   if (client.id !== playerId) {
+  //     const x = client.x
+  //     const y = client.y
+  //     drawPlayer(x, y)
+  //   }
+  // }
   for (const client of clientPlayers) {
-    if (client.id !== playerId) {
-      const x = client.x
-      const y = client.y
-      drawPlayer(x, y)
-    }
+    drawPlayer(client.x, client.y);
   }
-
   window.requestAnimationFrame(render)
 }
 
@@ -92,14 +94,17 @@ function init() {
     console.log('Received: ' + message.data)
     try {
       const messageType = data.type
-      if (messageType === 'initialised_player') {
+      if (!initialised && messageType === 'initialised_player') {
         playerId = data.data.id
         initialised = true
         iterate()
         render()
       }
       if(initialised) {
-        updateClientPlayer(data.data);
+        console.log(data);
+        if (data.type === 'all_move' ) {
+          updateClientPlayer(data.data);
+        }
       }
     } catch (error) {
       console.error(error)
@@ -165,27 +170,30 @@ function lerp (start, end, amt){
   if not, then just add it, and keep track. Otherwise, update that players' position.
 */
 function updateClientPlayer(data) {
-  let clientPlayerExists = false;
-  const clientPlayerID = data.id;
-  for (const index in clientPlayers) {
-    const client = clientPlayers[index];
+  clientPlayers = data;
+  console.log("SH", clientPlayers);
+  // console.log(data, "FUCK");
+  // let clientPlayerExists = false;
+  // const clientPlayerID = data.id;
+  // for (const index in clientPlayers) {
+  //   const client = clientPlayers[index];
 
-    if (client.id === clientPlayerID) {
-      clientPlayerExists = true;
-      if (data.x && data.y) {
-        const clientPlayerX = data.x;
-        const clientPlayerY = data.y;
-        client.x = clientPlayerX;
-        client.y = clientPlayerY;
-      }
-      break;
-    }
-  }
+  //   if (client.id === clientPlayerID) {
+  //     clientPlayerExists = true;
+  //     if (data.x && data.y) {
+  //       const clientPlayerX = data.x;
+  //       const clientPlayerY = data.y;
+  //       client.x = clientPlayerX;
+  //       client.y = clientPlayerY;
+  //     }
+  //     // break;
+  //   }
+  // }
 
-  if (!clientPlayerExists) {
-    clientPlayers.push({id:clientPlayerID, x:data.x, y:data.y});
-    console.log("ADDING NEW PLAYER", clientPlayers);
-  }
+  // if (!clientPlayerExists) {
+  //   clientPlayers.push({id:clientPlayerID, x:data.x, y:data.y});
+  //   console.log("ADDING NEW PLAYER", clientPlayers);
+  // }
 }
 
 function showConnectionStatus() {
