@@ -43,10 +43,14 @@ function render() {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, 500, 500);
 
+  drawPlayer(positionX, positionY)
+
   for (const client of clientPlayers) {
-    const x = client.x
-    const y = client.y
-    drawPlayer(x, y)
+    if (client.id !== playerId) {
+      const x = client.x
+      const y = client.y
+      drawPlayer(x, y)
+    }
   }
 
   window.requestAnimationFrame(render)
