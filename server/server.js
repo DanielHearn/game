@@ -7,12 +7,12 @@ let history = []
 let clients = []
 let sendBackClients = []
 const server = http.createServer(function (request, response) {})
-server.listen(webSocketsServerPort, function () {
-  console.log(new Date() + ' Server is listening on port ' + webSocketsServerPort)
+const wsServer = new webSocketServer({
+  httpServer: server,
 })
 
-let wsServer = new webSocketServer({
-  httpServer: server,
+server.listen(webSocketsServerPort, function () {
+  console.log(new Date() + ' Server is listening on port ' + webSocketsServerPort)
 })
 
 wsServer.on('request', function (request) {
@@ -30,7 +30,7 @@ wsServer.on('request', function (request) {
       for (const client of clients) {
         client.connection.sendUTF(`${msg}`)
       }
-      connection.sendUTF('Message received')
+      //connection.sendUTF('Message received')
     }
   })
 
