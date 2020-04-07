@@ -1,5 +1,7 @@
 'use strict'
 process.title = 'node-chat'
+const uuid = require("uuid/v4");
+
 const webSocketsServerPort = 1337
 const webSocketServer = require('websocket').server
 const http = require('http')
@@ -24,9 +26,16 @@ wsServer.on('request', function (request) {
 
   connection.on('message', function (message) {
     if (message.type === 'utf8') {
-      const msg = message.utf8Data
+      var msg = message.utf8Data
+      var data = JSON.parse(msg);
       console.log(`Received Message: ${msg}`)
+      console.log(data.id);
       for (const client of clients) {
+        if (data.id == null) {
+            data.id = uuid();
+        }
+        console.log(data);
+        msg = JSON.stringify(data);
         client.connection.sendUTF(`${msg}`)
       }
       //connection.sendUTF('Message received')

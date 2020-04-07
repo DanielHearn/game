@@ -10,19 +10,18 @@ let canvas
 let ctx
 let connected = false
 
-// const uuid = require("uuid/v4");
 
 const playerColour = "#FF0000"
 const playerSize = 32
 const statusElement = document.querySelector('#connection_status')
 const sendButton = document.querySelector('#send')
 const clientPlayers = [ ]; // List of local instances of other clients' players
-const playerId = null;
-
+const playerSpeed = 2.0;
+var playerId = null;
+var positionX = 0;
+var positionY = 0;
 window.onload = (event) => {
   init()
-  playerId = 1;
-  // playerId = uuid(); // Generating a UUID for the player ID every instance (If they refresh this should change)
 }
 
 function send(msg) {
@@ -33,6 +32,26 @@ function send(msg) {
 function init() {
   console.log('Initialisation')
   connection = new WebSocket(`ws://${serverIP}:${serverPort}`)
+
+  document.addEventListener('keydown', event => {
+    const key = event.key.toLowerCase();
+    switch(key) {
+      case 'a':
+        positionX -= playerSpeed;
+        break;
+      case 'd':
+        positionX += playerSpeed;
+        break;
+      case 'w':
+        positionY -= playerSpeed;
+        break;
+      case 's':
+        positionY += playerSpeed;
+        
+        break;
+    }
+    move();
+  });
 
   connection.onopen = function () {
     console.log('Connected')
@@ -46,21 +65,21 @@ function init() {
   
   connection.onmessage = function (message) {
     
-    const client = JSON.parse(message.data.client)
+    const client = JSON.parse(message.data)
     updateClientPlayer(client);
-
-    if (message.data) {
-      if (message.data.clients) {
-        
-        for (const client of clientPlayers) {
-          const x = client.pos.x
-          const y = client.pos.y
-      
-          drawPlayer(x, y)
-        }
-      }
+    console.log(client);
+    if (playerId == null) {
+      playerId = client.id;
     }
-    ctx.fillRect(0, 0, 500, 500)
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 500, 500);
+    for (const client of clientPlayers) {
+
+      const x = client.x
+      const y = client.y
+      console.log(client);
+      drawPlayer(x, y)
+    }
   };
 
 
@@ -72,24 +91,30 @@ function init() {
   })
 }
 
+function move(){
+  send(JSON.stringify({id:playerId, x:positionX, y:positionY}))
+}
+
 function updateClientPlayer(data) {
   var clientPlayerExists = false;
   var clientPlayerID = data.id;
   for (const index in clientPlayers) {
-    var client = clientPlayer[index];
+    var client = clientPlayers[index];
 
     if (client.id == clientPlayerID) {
+      console.log("TS");
       clientPlayerExists = true;
       var clientPlayerX = data.x;
       var clientPlayerY = data.y;
-      clientPlayer[i].x = clientPlayerX;
-      clientPlayer[i].y = clientPlayerY;
+      clientPlayers[index].x = clientPlayerX;
+      clientPlayers[index].y = clientPlayerY;
       break;
     }
   }
 
   if (!clientPlayerExists) {
     clientPlayers.push({id:clientPlayerID, x:data.x, y:data.y});
+    console.log("ADDING NEW PLAYER", clientPlayers);
   }
 }
 
@@ -101,16 +126,16 @@ function showConnectionStatus() {
 function initCanvas() {
   canvas = document.querySelector("#drawable");
   ctx = canvas.getContext("2d");
+  ctx.fillRect(0, 0, 500, 500)
+
 }
 
 function gameLoop() {
-  const clear = setInterval(function() {
-    send(JSON.stringify({id:playerId, x:10, y:10}))
-  }, 500);
 }
 
 
 function drawPlayer(x, y) {
   ctx.fillStyle = playerColour
+  console.log("test")
   ctx.fillRect(x, y, playerSize, playerSize)
 }
