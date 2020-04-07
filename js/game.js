@@ -1,8 +1,8 @@
 
 window.WebSocket = window.WebSocket || window.MozWebSocket
 
-// const serverIP = '86.151.188.17'
-const serverIP = '192.168.0.27';
+const serverIP = '86.151.188.17'
+// const serverIP = '192.168.0.27';
 
 const serverPort = '1337'
 let connection = null
