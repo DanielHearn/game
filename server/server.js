@@ -1,13 +1,11 @@
 'use strict'
 process.title = 'node-chat'
-const uuid = require("uuid/v4");
-
+const uuidv4 = require('uuid/v4');
 const webSocketsServerPort = 1337
-const webSocketServer = require('websocket').server
+const WebSocket = require('ws');
 const http = require('http')
 let history = []
-let clients = []
-let users = []
+let players = []
 const playerColours = [
   'red',
   'blue',
@@ -17,71 +15,76 @@ const playerColours = [
 ]
 
 const server = http.createServer(function (request, response) {})
-const wsServer = new webSocketServer({
-  httpServer: server,
-})
+const wss = new WebSocket.Server({ server });
 
 server.listen(webSocketsServerPort, function () {
   console.log(new Date() + ' Server is listening on port ' + webSocketsServerPort)
 })
 
-wsServer.on('request', function (request) {
-  console.log(`${new Date()} Connection from origin ${request.origin}`)
+wss.on('connection', function connection(ws, request, client) {
+  console.log(`${new Date()} Connection from origin ${ws.origin}`)
+  console.log(`Clients active: ${wss.clients.size}`)
 
-  const connection = request.accept(null, request.origin)
-  clients.push(createUser(connection))
-  console.log(`Clients: ${clients.length}`)
-
-  connection.on('message', function (message) {
-    if (message.type === 'utf8') {
-      const msg = message.utf8Data
-      const data = JSON.parse(msg);
-      let reply = ''
-      console.log(`Received Message: ${msg}`)
-      if (data.type) {
-        const messageType = data.type
-        if (messageType === 'init_player') {
-          const playerID = uuid()
-          const newUser = {
-            id: playerID,
-            colour: randomPlayerColour(),
-            name: playerID,
-            x: 0,
-            y: 0
-          }
-          reply = JSON.stringify({
-            data: {
-              user: newUser,
-              players: users
-            },
-            type: 'initialised_player'
-          });
-          users.push(newUser)
-          console.log(reply)
-          broadcast(reply)
-        } else if (messageType === 'move') {
-          for (let user of users) {
-            if (user.id === data.data.id) {
-              user.x = data.data.x
-              user.y = data.data.y
-              break
-            }
-          }
-          reply = JSON.stringify({
-            data: users,
-            type: 'players'
-          });
-          console.log(reply)
-          broadcast(reply)
+  ws.on('message', function incoming(message) {
+    console.log(`Received Message: ${message}`)
+    const data = JSON.parse(message);
+    let reply = ''
+    if (data.type) {
+      const messageType = data.type
+      if (messageType === 'init_player') {
+        const playerID = uuidv4()
+        const newUser = {
+          id: playerID,
+          colour: randomPlayerColour(),
+          name: playerID,
+          x: 0,
+          y: 0
         }
+        reply = JSON.stringify({
+          data: {
+            user: newUser,
+            players: players
+          },
+          type: 'initialised_player'
+        });
+        players.push(newUser)
+        ws.playerID = playerID
+        ws.send(reply)
+
+        // Update all clients with new player
+        reply = JSON.stringify({
+          data: players,
+          type: 'players'
+        });
+        broadcast(reply)
+      } else if (messageType === 'move') {
+        for (let player of players) {
+          if (player.id === data.data.id) {
+            player.x = data.data.x
+            player.y = data.data.y
+            break
+          }
+        }
+
+        // Update all clients with new player position
+        reply = JSON.stringify({
+          data: players,
+          type: 'players'
+        });
+        broadcast(reply)
       }
-      //connection.sendUTF('Message received')
     }
   })
 
-  connection.on('close', function (connection) {
-    clients = clients.filter((client) => client.remoteAddress !== connection.remoteAddress)
-    console.log(`Clients: ${clients.length}`)
+  ws.on('close', function close() {
+    console.log('Client disconnection')
+    console.log(`Clients active: ${wss.clients.size}`)
+    players = players.filter((player) => player.id !== ws.playerID)
+    const reply = JSON.stringify({
+      data: players,
+      type: 'players'
+    });
+    broadcast(reply)
   })
 })
 
@@ -90,18 +93,9 @@ function randomPlayerColour() {
 }
 
 function broadcast(data) {
-  for (const client of clients) {
-    client.connection.sendUTF(`${data}`)
-  }
-}
-
-function createUser(connection) {
-  return {
-    connection: connection,
-    name: 'JEFF',
-    pos: {
-      x: 0,
-      y: 0,
-    },
-  }
+  wss.clients.forEach(function each(client) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(data);
+    }
+  });
 }

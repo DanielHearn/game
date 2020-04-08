@@ -12,7 +12,7 @@
   "devDependencies": {
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11",
-    "websocket": "^1.0.31"
+    "ws": "^7.2.3"
   },
   "dependencies": {
     "uuid": "^7.0.3"
