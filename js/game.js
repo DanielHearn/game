@@ -45,14 +45,14 @@ function iterate() {
 function render() {
   ctx.fillStyle = '#666';
   ctx.fillRect(0, 0, 500, 500);
-  drawPlayer(player.x, player.y, player.colour, player.name, player.id)
+  drawPlayer(player.x, player.y, player.colour, player.name, player.id, player.messages)
 
   if (clientPlayers.length !== 0) {
     for (const client of clientPlayers) {
       if (client.id !== playerId) {
         const x = client.x
         const y = client.y
-        drawPlayer(x, y, client.colour, client.name, client.id);
+        drawPlayer(x, y, client.colour, client.name, client.id, client.messages);
       }
     }
   }
@@ -120,6 +120,9 @@ function init() {
           case 'close_player':
             closePlayer(data);
             break;
+          case 'message':
+            updatePlayerMessages(data);
+            break;
           }
       }
     } catch (error) {
@@ -129,8 +132,26 @@ function init() {
 
   initCanvas()
   sendButton.addEventListener('click', () => {
-    send(JSON.stringify({type:"MESSAGE", message:"Random text", id:playerId}));
+    let textInput = document.querySelector('#msg-box-input').value;
+    if (textInput !== "") {
+      send(JSON.stringify({type:"message", message:textInput, id:playerId}));
+    }
   })
+}
+
+function updatePlayerMessages(messages) {
+  const messageId = messages.id;
+
+  if (messageId === playerId) {
+    player.messages.push(messages);
+  } else {
+    for (const player of clientPlayers) {
+      if (player.id === messageId) {
+        player.messages.push(messages);
+        return;
+      }
+    }
+  }
 }
 
 function closePlayer(closePlayerId) {
@@ -143,7 +164,6 @@ function closePlayer(closePlayerId) {
     }
   }
 }
-
 
 function initiateClientPlayers(data) {
   const cps = data;
@@ -254,15 +274,15 @@ function initCanvas() {
   ctx.fillRect(0, 0, 500, 500)
 }
 
-function drawPlayer(x, y, colour, name, id) {
+function drawPlayer(x, y, colour, name, id, messages) {
   ctx.fillStyle = colour
   ctx.fillRect(x, y, playerSize, playerSize)
   ctx.fillStyle = '#FFFFFF';
   const nameOffset = name.length > 10 ? name.length*2 : 0
   ctx.fillText(name, x-nameOffset, y-6);
 
-  for (const index in player.messages) {
-    let msg = playerMessages[index];
+  for (const index in messages) {
+    let msg = messages[index];
     if (msg.id == id) {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillText(msg.message, x, y-(index*10));
@@ -279,5 +299,17 @@ class Player  {
     this.name = name;
     this.id = id;
     this.messages = [];
+    this.updateMessage();
+  }
+
+  updateMessage() {
+    let messages = this.messages;
+    setInterval(function() {
+      if(messages.length > 0) {
+        messages.pop();
+        this.messages = messages;
+      }
+
+    }, 5000);
   }
 }

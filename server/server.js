@@ -72,6 +72,8 @@ wss.on('connection', function connection(ws, request, client) {
           type: 'players'
         });
         broadcast(reply)
+      } else if (messageType === 'message') {
+        broadcast(JSON.stringify(data));
       }
     }
   })
