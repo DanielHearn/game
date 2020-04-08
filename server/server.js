@@ -81,8 +81,8 @@ wss.on('connection', function connection(ws, request, client) {
     console.log(`Clients active: ${wss.clients.size}`)
     players = players.filter((player) => player.id !== ws.playerID)
     const reply = JSON.stringify({
-      data: players,
-      type: 'players'
+      data: ws.playerID,
+      type: 'close_player'
     });
     broadcast(reply)
   })

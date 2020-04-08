@@ -25,6 +25,7 @@ let playerColour = "#FF0000"
 let playerName = ''
 let activeKeys = {}
 let initialised = false
+let player;
 const gameSpeed = 30;
 
 window.onload = (event) => {
@@ -44,14 +45,15 @@ function iterate() {
 function render() {
   ctx.fillStyle = '#666';
   ctx.fillRect(0, 0, 500, 500);
+  drawPlayer(player.x, player.y, player.colour, player.name, player.id)
 
-  drawPlayer(positionX, positionY, playerColour, playerName)
-
-  for (const client of clientPlayers) {
-    if (client.id !== playerId) {
-      const x = client.x
-      const y = client.y
-      drawPlayer(x, y, client.colour, client.name)
+  if (clientPlayers.length !== 0) {
+    for (const client of clientPlayers) {
+      if (client.id !== playerId) {
+        const x = client.x
+        const y = client.y
+        drawPlayer(x, y, client.colour, client.name, client.id);
+      }
     }
   }
   window.requestAnimationFrame(render)
@@ -97,16 +99,28 @@ function init() {
         playerId = data.data.user.id
         playerColour = data.data.user.colour
         playerName = data.data.user.name
-        clientPlayers = data.data.players
+        console.log(data.data)
+
+        if (data.data.players.length > 0) {
+          initiateClientPlayers(data.data.players);
+        }
+
+        player = new Player(0, 0, playerColour, playerName, playerId);
         initialised = true
         iterate()
         render()
       } 
+      console.log(data);
+
       if(initialised) {
-        console.log(data);
-        if (data.type === 'players' ) {
-          clientPlayers = data.data;
-        }
+        switch(data.type) {
+          case 'players':
+            updatePlayerObjects(data.data);
+            break;
+          case 'close_player':
+            closePlayer(data);
+            break;
+          }
       }
     } catch (error) {
       console.error(error)
@@ -119,9 +133,48 @@ function init() {
   })
 }
 
+function closePlayer(closePlayerId) {
+  console.log(closePlayerId);
+  for (let index in clientPlayers) {
+    var closePlayer = clientPlayers[index];
+
+    if (closePlayer.id === closePlayerId.data) {
+      clientPlayers.splice(index);
+    }
+  }
+}
+
+
+function initiateClientPlayers(data) {
+  const cps = data;
+  for (let player of cps) {
+    let newPlayer = new Player(player.x, player.y, player.colour, player.name, player.id);
+    clientPlayers.push(newPlayer);
+  }
+}
+
+function updatePlayerObjects(data) {
+  console.log(data, clientPlayers);
+  for (let p of data) {
+    let potentiallyNewPlayer = null;
+    for (let clientPlayer of clientPlayers) {
+      if (p.id === clientPlayer.id && player.id !== p.id) {
+        clientPlayer.x = p.x;
+        clientPlayer.y = p.y;
+        console.log(clientPlayer);
+        potentiallyNewPlayer = clientPlayer;
+      }
+    }
+    if (potentiallyNewPlayer === null && p.id != playerId) {
+      potentiallyNewPlayer = new Player(p.x, p.y, p.colour, p.name, p.id);
+      clientPlayers.push(potentiallyNewPlayer);
+    }
+  }
+}
+
 function move(){
-  let newX = positionX
-  let newY = positionY
+  let newX = player.x
+  let newY = player.y
   let alreadyMoving = false
   if (activeKeys['a']) {
     if(alreadyMoving) {
@@ -156,13 +209,12 @@ function move(){
     }
     alreadyMoving = true
   }
-  if (positionX !== newX || positionY !== newY) {
+  if (player.x !== newX || player.y !== newY) {
     if (!checkWallCollision(newX, newY, mapSize) && !checkPlayerCollision(newX, newY, clientPlayers)) {
-      positionX = newX
-      positionY = newY
+      player.x = newX
+      player.y = newY
     }
-  
-    send(JSON.stringify({type: 'move', data: {id:playerId, x:positionX, y:positionY}}))
+    send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
   }
 }
 
@@ -209,9 +261,8 @@ function drawPlayer(x, y, colour, name, id) {
   const nameOffset = name.length > 10 ? name.length*2 : 0
   ctx.fillText(name, x-nameOffset, y-6);
 
-  for (const index in playerMessages) {
+  for (const index in player.messages) {
     let msg = playerMessages[index];
-    console.log(msg, "TEE");
     if (msg.id == id) {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillText(msg.message, x, y-(index*10));
@@ -221,7 +272,6 @@ function drawPlayer(x, y, colour, name, id) {
 }
 
 class Player  {
-  
   constructor(x, y, colour, name, id) {
     this.x = x;
     this.y = y;
@@ -229,12 +279,5 @@ class Player  {
     this.name = name;
     this.id = id;
     this.messages = [];
-  }
-  move () {
-
-  }
-
-  draw () {
-
   }
 }
