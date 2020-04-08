@@ -1,8 +1,8 @@
 
 window.WebSocket = window.WebSocket || window.MozWebSocket
 
-const serverIP = '86.151.188.17'
-//const serverIP = '192.168.0.27';
+// const serverIP = '86.151.188.17'
+const serverIP = '192.168.0.27';
 
 const serverPort = '1337'
 let connection = null
@@ -218,4 +218,23 @@ function drawPlayer(x, y, colour, name, id) {
     }
   }
 
+}
+
+class Player  {
+  
+  constructor(x, y, colour, name, id) {
+    this.x = x;
+    this.y = y;
+    this.colour = colour;
+    this.name = name;
+    this.id = id;
+    this.messages = [];
+  }
+  move () {
+
+  }
+
+  draw () {
+
+  }
 }
