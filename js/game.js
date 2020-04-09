@@ -17,6 +17,9 @@ const sendForm = document.querySelector('#send_form')
 const messageInput = document.querySelector('#msg-box-input')
 const playerSpeed = 4.0;
 const mapSize = 500;
+const cursorSize = 12;
+const cursorColour = 'black'
+let mousePosition = null
 let clientPlayers = [ ]; // List of local instances of other clients' players
 let activeKeys = {}
 let initialised = false
@@ -50,6 +53,7 @@ function render() {
       if (client.id !== player.id) {
         const x = client.x
         const y = client.y
+        const direction = client.direction
         let opacity = 1
 
         if (x < player.x + playerSize &&
@@ -65,6 +69,8 @@ function render() {
 
   // Draw user's player on top of other players
   drawPlayer(player.x, player.y, player.colour, 1, player.name, player.id, player.messages)
+  drawCursor()
+  
   window.requestAnimationFrame(render)
 }
 
@@ -128,12 +134,11 @@ function init() {
           initiateClientPlayers(data.data.players);
         }
 
-        player = new Player(userData.x, userData.y, playerColour, playerName, playerId);
+        player = new Player(userData.x, userData.y, userData.direction, playerColour, playerName, playerId);
         initialised = true
         iterate()
         render()
       } 
-      console.log(data);
 
       if(initialised) {
         switch(data.type) {
@@ -214,13 +219,12 @@ function closePlayer(closePlayerId) {
 function initiateClientPlayers(data) {
   const cps = data;
   for (let otherPlayer of cps) {
-    const newPlayer = new Player(otherPlayer.x, otherPlayer.y, otherPlayer.colour, otherPlayer.name, otherPlayer.id);
+    const newPlayer = newsd Player(otherPlayer.x, otherPlayer.y, otherPlayer.colour, otherPlayer.name, otherPlayer.id);
     clientPlayers.push(newPlayer);
   }
 }
 
 function updatePlayerObjects(data) {
-  console.log(data, clientPlayers);
   for (let p of data) {
     let potentiallyNewPlayer = null;
     for (let clientPlayer of clientPlayers) {
@@ -274,18 +278,18 @@ function move(){
       newY += playerSpeed
     }
     alreadyMoving = true
-  }
+  } 
 
-
-
-  if (player.x !== newX || player.y !== newY) {
-    // Disabled player collision due to local movement
-    //if (!checkWallCollision(newX, newY, mapSize) && !checkPlayerCollision(newX, newY, clientPlayers)) {
+  if (player.x !== newX || player.y !== newY || player.direction !== player.lastDirection) {
     if (!checkWallCollision(newX, newY, mapSize)) {
       player.x = newX
       player.y = newY
     }
-    send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
+    send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y, direction:player.direction}}))
+  }
+
+  if (player.direction !== player.lastDirection) {
+    player.lastDirection = player.direction
   }
 
   if (mapInitialised) {
@@ -343,6 +347,21 @@ function initCanvas() {
   canvas = document.querySelector("#drawable");
   ctx = canvas.getContext("2d");
   ctx.fillRect(0, 0, 500, 500)
+  canvas.addEventListener('mousemove', handleMouse, false);
+}
+
+function drawCursor() {
+  if (mousePosition) {
+    ctx.fillStyle = cursorColour
+    const gap = cursorSize*0.4
+    const size = cursorSize*0.8
+    const x = mousePosition.x - size
+    const y = mousePosition.y - size
+    ctx.fillRect(x, y + size, size, size / 2)
+    ctx.fillRect(x + size + gap, y + size, size, size / 2)
+    ctx.fillRect(x + size, y, size/2, size)
+    ctx.fillRect(x + size, y + size + gap, size / 2, size)
+  }
 }
 
 function drawPlayer(x, y, colour, opacity, name, id, messages) {
@@ -381,17 +400,39 @@ function drawMap() {
         // console.log(gameMap.tiles[i].colour);
       }
     }
+function getMousePositionInElement(element, event) {
+  const rect = element.getBoundingClientRect()
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  }
+}
+
+function handleMouse(e) {
+  mousePosition = getMousePositionInElement(canvas, e)
+  if(player) {
+    const vector = {
+      x: mousePosition.x - (player.x + playerSize),
+      y: mousePosition.y - (player.y + playerSize)
+    }
+    const angleRad = Math.acos(vector.x / Math.sqrt(vector.x*vector.x + vector.y*vector.y))
+    const angleDeg = angleRad * 180 / Math.PI;
+    player.lastDirection = player.direction
+    player.direction = angleDeg
   }
 }
 
 class Player  {
-  constructor(x, y, colour, name, id) {
+  constructor(x, y, direction, colour, name, id) {
     this.x = x;
     this.y = y;
+    this.direction = direction;
+    this.lastDirection = direction
     this.colour = colour;
     this.name = name;
     this.id = id;
     this.messages = [];
+    this.direction = 0;
   }
 }
 

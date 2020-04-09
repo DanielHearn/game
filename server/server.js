@@ -50,8 +50,9 @@ wss.on('connection', function connection(ws, request, client) {
           id: playerID,
           colour: randomPlayerColour(),
           name: playerID,
-          x: 250,
-          y: 250
+          x: 75,
+          y: 75,
+          direction: 0
         }
         reply = JSON.stringify({
           data: {
@@ -77,6 +78,7 @@ wss.on('connection', function connection(ws, request, client) {
           if (player.id === data.data.id) {
             player.x = data.data.x
             player.y = data.data.y
+            player.direction = data.data.direction
             break
           }
         }
