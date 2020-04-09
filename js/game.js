@@ -130,10 +130,6 @@ function init() {
         const playerColour = userData.colour
         const playerName = userData.name
 
-        if (data.data.players.length > 0) {
-          initiateClientPlayers(data.data.players);
-        }
-
         player = new Player(userData.x, userData.y, userData.direction, playerColour, playerName, playerId);
         initialised = true
         iterate()
@@ -214,14 +210,6 @@ function updatePlayerMessages(messages) {
 
 function closePlayer(closePlayerId) {
   clientPlayers = clientPlayers.filter((otherPlayer) => otherPlayer.id !== closePlayerId.data)
-}
-
-function initiateClientPlayers(data) {
-  const cps = data;
-  for (let otherPlayer of cps) {
-    const newPlayer = new Player(otherPlayer.x, otherPlayer.y, otherPlayer.colour, otherPlayer.name, otherPlayer.id);
-    clientPlayers.push(newPlayer);
-  }
 }
 
 function updatePlayerObjects(data) {
