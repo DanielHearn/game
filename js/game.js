@@ -20,7 +20,9 @@ const mapSize = 500;
 let clientPlayers = [ ]; // List of local instances of other clients' players
 let activeKeys = {}
 let initialised = false
+let mapInitialised = false;
 let player;
+let gameMap;
 const gameSpeed = 30;
 
 window.onload = (event) => {
@@ -40,6 +42,8 @@ function iterate() {
 function render() {
   ctx.fillStyle = '#666';
   ctx.fillRect(0, 0, 500, 500);
+
+  drawMap();
 
   if (clientPlayers.length !== 0) {
     for (const client of clientPlayers) {
@@ -67,7 +71,10 @@ function render() {
 function sendInitRequest() {
   send(JSON.stringify({
     type: 'init_player'
-  }))
+  }));
+  send(JSON.stringify({
+    type: 'init_map'
+  }));
 }
 
 function init() {
@@ -101,6 +108,16 @@ function init() {
       console.log('Received: ' + message.data)
       const previousPlayerCount = clientPlayers.length
       const messageType = data.type
+      if (!mapInitialised && messageType === 'initialised_map') {
+        const colour = data.colour;
+        const mapData = data.mapData;
+        const width = data.width;
+        const height = data.height;
+        gameMap = new GameMap(colour, mapData, width, height);
+        gameMap.initialiseTiles();
+        console.log(gameMap, "FUCK")
+        mapInitialised = true;
+      }
       if (!initialised && messageType === 'initialised_player') {
         const userData = data.data.user
         const playerId = userData.id
@@ -129,6 +146,8 @@ function init() {
           case 'message':
             updatePlayerMessages(data);
             break;
+          case 'update_map':
+            updateMap(data.data);
           }
       }
 
@@ -147,6 +166,20 @@ function init() {
       send(JSON.stringify({type:"message", message:textInput, id:player.id}));
     }
   })
+}
+
+function updateMap(mapData) {
+  let tileIndex = mapData.index;
+  let interactionType = mapData.type;
+  let newMapData = mapData.newMapData;
+  switch (interactionType) {
+    case 'delete':
+      const tileToDelete = gameMap.tiles[tileIndex];
+      gameMap.tiles[tileIndex] = new MapTile(null, tileToDelete.x, tileToDelete.y, 0);
+      break;   
+  }
+    // gameMap.mapData = mapData;
+    console.log(mapData);
 }
 
 function updatePlayerMessages(messages) {
@@ -242,6 +275,9 @@ function move(){
     }
     alreadyMoving = true
   }
+
+
+
   if (player.x !== newX || player.y !== newY) {
     // Disabled player collision due to local movement
     //if (!checkWallCollision(newX, newY, mapSize) && !checkPlayerCollision(newX, newY, clientPlayers)) {
@@ -251,6 +287,24 @@ function move(){
     }
     send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
   }
+
+  if (mapInitialised) {
+    for (let i = 0; i < gameMap.tiles.length; i ++) {
+      const tile = gameMap.tiles[i];
+      if (checkTileCollision(tile)) {
+        const tileToDelete = tile;
+        gameMap.mapData[i] = 0;
+        gameMap.tiles[i] = new MapTile(null, tileToDelete.x, tileToDelete.y, 0);
+        send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
+      }
+    }
+    
+  }
+}
+
+function checkTileCollision(tile) {
+  // console.log(tile);
+  return tile.x < player.x + playerSize && tile.x+gameMap.tileSize > player.x && tile.y < player.y+playerSize && tile.y+gameMap.tileSize > player.y && tile.type === 1;
 }
 
 function checkWallCollision(newX, newY, mapSize) {
@@ -311,7 +365,23 @@ function drawPlayer(x, y, colour, opacity, name, id, messages) {
       ctx.fillText(messageText, x+5, messageY);
     }
   }
+}
 
+function drawMap() {
+  if (mapInitialised === true) {
+    for (let i = 0; i < gameMap.tiles.length; i ++ ) {
+      let tile = gameMap.tiles[i];
+      switch (tile.type) {
+        case 1:
+          ctx.fillStyle = tile.colour;
+          ctx.fillRect(tile.x, tile.y, gameMap.tileSize, gameMap.tileSize);
+          break;
+        case 0:
+          break
+        // console.log(gameMap.tiles[i].colour);
+      }
+    }
+  }
 }
 
 class Player  {
@@ -322,5 +392,42 @@ class Player  {
     this.name = name;
     this.id = id;
     this.messages = [];
+  }
+}
+
+class GameMap {
+  constructor(colour, mapData, width, height) {
+    this.colour = colour;
+    this.mapData = mapData;
+    this.width = width;
+    this.height = height;
+    this.tileSize = 16;
+    this.tiles = [];
+  }
+
+  initialiseTiles() {
+    for (let i = 0; i < this.mapData.length; i ++) {
+      var tileX = Math.floor(i % this.width) * this.tileSize;
+      var tileY = Math.floor(i / this.height) * this.tileSize;
+      var tileType = this.mapData[i];
+
+      switch (tileType) {
+        case 1:
+          this.tiles.push(new MapTile(this.colour, tileX, tileY, 1));
+          break;
+        case 0:
+          this.tiles.push(new MapTile(this.colour, tileX, tileY, 0));
+          break;
+        }
+    }
+  }
+}
+
+class MapTile {
+  constructor(colour, x, y, type) {
+    this.colour = colour;
+    this.x = x;
+    this.y = y;
+    this.type = type;
   }
 }

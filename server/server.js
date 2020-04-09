@@ -4,8 +4,16 @@ const uuidv4 = require('uuid/v4');
 const webSocketsServerPort = 1337
 const WebSocket = require('ws');
 const http = require('http')
+const mapColour = '#bdc3c7';
+const mapWidth = 30;
+const mapHeight = 30;
+
+
 let history = []
 let players = []
+
+var mapData = [];
+
 const playerColours = [
   '#27ae60',
   '#2980b9',
@@ -22,6 +30,7 @@ const server = http.createServer(function (request, response) {})
 const wss = new WebSocket.Server({ server });
 
 server.listen(webSocketsServerPort, function () {
+  initialiseNewMap();
   console.log(new Date() + ' Server is listening on port ' + webSocketsServerPort)
 })
 
@@ -61,6 +70,8 @@ wss.on('connection', function connection(ws, request, client) {
           type: 'players'
         });
         broadcast(reply)
+      } else if (messageType === 'init_map') {
+        broadcast(JSON.stringify({type:'initialised_map', mapData: mapData, colour:mapColour, width:mapWidth, height:mapHeight}));
       } else if (messageType === 'move') {
         for (let player of players) {
           if (player.id === data.data.id) {
@@ -76,6 +87,15 @@ wss.on('connection', function connection(ws, request, client) {
           type: 'players'
         });
         broadcast(reply)
+      }else if (messageType === 'update_map') {
+        const tileInteraction = data.tileInteraction;
+        const tileIndex = data.tileIndex;
+        switch (tileInteraction) {
+          case 'delete':
+            mapData[tileIndex] = 0;
+            break;
+        }
+        broadcast(JSON.stringify({'type':'update_map', data:{index:tileIndex, type:data.tileInteraction, newMapData:mapData}}));
       } else if (messageType === 'message') {
         broadcast(JSON.stringify(data));
       }
@@ -104,4 +124,12 @@ function broadcast(data) {
       client.send(data);
     }
   });
+}
+
+function initialiseNewMap() {
+  console.log("MAO");
+  // Assume map is a square
+  for (let i = 0; i < mapWidth*mapHeight; i ++) {
+    mapData[i] = 1; // 1 being a filled block for now, 0 being an empty block
+  }
 }
