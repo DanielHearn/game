@@ -19,8 +19,6 @@ const playerMessages = [ ];
 const playerSpeed = 4.0;
 const mapSize = 500;
 let clientPlayers = [ ]; // List of local instances of other clients' players
-let playerId = null;
-let playerColour = "#FF0000"
 let activeKeys = {}
 let initialised = false
 let player;
@@ -43,17 +41,28 @@ function iterate() {
 function render() {
   ctx.fillStyle = '#666';
   ctx.fillRect(0, 0, 500, 500);
-  drawPlayer(player.x, player.y, player.colour, player.name, player.id, player.messages)
 
   if (clientPlayers.length !== 0) {
     for (const client of clientPlayers) {
-      if (client.id !== playerId) {
+      if (client.id !== player.id) {
         const x = client.x
         const y = client.y
-        drawPlayer(x, y, client.colour, client.name, client.id, client.messages);
+        let opacity = 1
+
+        if (x < player.x + playerSize &&
+          x + playerSize > player.x &&
+          y < player.y + playerSize &&
+          playerSize + y > player.y) {
+          opacity = 0.33
+        }    
+        console.log(opacity)
+        drawPlayer(x, y, client.colour, opacity, client.name, client.id, client.messages);
       }
     }
   }
+
+  // Draw user's player on top of other players
+  drawPlayer(player.x, player.y, player.colour, 1, player.name, player.id, player.messages)
   window.requestAnimationFrame(render)
 }
 
@@ -96,7 +105,7 @@ function init() {
       const messageType = data.type
       if (!initialised && messageType === 'initialised_player') {
         const userData = data.data.user
-        playerId = userData.id
+        const playerId = userData.id
         const playerColour = userData.colour
         const playerName = userData.name
 
@@ -136,7 +145,7 @@ function init() {
     e.preventDefault()
     let textInput = document.querySelector('#msg-box-input').value;
     if (textInput !== "") {
-      send(JSON.stringify({type:"message", message:textInput, id:playerId}));
+      send(JSON.stringify({type:"message", message:textInput, id:player.id}));
     }
   })
 }
@@ -144,7 +153,7 @@ function init() {
 function updatePlayerMessages(messages) {
   const messageId = messages.id;
 
-  if (messageId === playerId) {
+  if (messageId === player.id) {
     player.messages.push(messages);
   } else {
     for (const player of clientPlayers) {
@@ -180,7 +189,7 @@ function updatePlayerObjects(data) {
         potentiallyNewPlayer = clientPlayer;
       }
     }
-    if (potentiallyNewPlayer === null && p.id != playerId) {
+    if (potentiallyNewPlayer === null && p.id != player.id) {
       potentiallyNewPlayer = new Player(p.x, p.y, p.colour, p.name, p.id);
       clientPlayers.push(potentiallyNewPlayer);
     }
@@ -225,7 +234,9 @@ function move(){
     alreadyMoving = true
   }
   if (player.x !== newX || player.y !== newY) {
-    if (!checkWallCollision(newX, newY, mapSize) && !checkPlayerCollision(newX, newY, clientPlayers)) {
+    // Disabled player collision due to local movement
+    //if (!checkWallCollision(newX, newY, mapSize) && !checkPlayerCollision(newX, newY, clientPlayers)) {
+    if (!checkWallCollision(newX, newY, mapSize)) {
       player.x = newX
       player.y = newY
     }
@@ -245,15 +256,13 @@ function checkWallCollision(newX, newY, mapSize) {
 }
 
 function checkPlayerCollision(newX, newY, players) {
-  for (let player of players) {
-    if (playerId !== player.id) {
-      if (newX < player.x + playerSize &&
-        newX + playerSize > player.x &&
-        newY < player.y + playerSize &&
-        playerSize + newY > player.y) {
-        return true
-      } 
-    }     
+  for (let otherPlayer of players) {
+    if (newX < player.x + playerSize &&
+      newX + playerSize > player.x &&
+      newY < player.y + playerSize &&
+      playerSize + newY > player.y) {
+      return true
+    }    
   }
   return false
 }
@@ -273,9 +282,10 @@ function initCanvas() {
   ctx.fillRect(0, 0, 500, 500)
 }
 
-function drawPlayer(x, y, colour, name, id, messages) {
+function drawPlayer(x, y, colour, opacity, name, id, messages) {
+  ctx.globalAlpha = opacity;
   ctx.fillStyle = colour
-  ctx.fillRect(x, y, playerSize, playerSize)
+  ctx.fillRect(x, y, playerSize, playerSize, opacity)
   ctx.fillStyle = '#FFFFFF';
   const nameOffset = name.length > 10 ? name.length*2 : 0
   ctx.fillText(name, x-nameOffset, y-6);
