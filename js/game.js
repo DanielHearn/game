@@ -1,8 +1,8 @@
 
 window.WebSocket = window.WebSocket || window.MozWebSocket
 
-// const serverIP = '86.151.188.17'
-const serverIP = '192.168.0.27';
+const serverIP = '127.0.0.1'
+//const serverIP = '192.168.0.27';
 
 const serverPort = '1337'
 let connection = null
@@ -12,17 +12,15 @@ let connected = false
 
 const playerSize = 32
 const statusElement = document.querySelector('#connection_status')
-const sendButton = document.querySelector('#send')
+const playerCountElement = document.querySelector('#player_count')
+const sendForm = document.querySelector('#send_form')
 const playersToUpdate = [ ];
 const playerMessages = [ ];
 const playerSpeed = 4.0;
 const mapSize = 500;
 let clientPlayers = [ ]; // List of local instances of other clients' players
 let playerId = null;
-let positionX = 0;
-let positionY = 0;
 let playerColour = "#FF0000"
-let playerName = ''
 let activeKeys = {}
 let initialised = false
 let player;
@@ -94,18 +92,19 @@ function init() {
     try {
       const data = JSON.parse(message.data)
       console.log('Received: ' + message.data)
+      const previousPlayerCount = clientPlayers.length
       const messageType = data.type
       if (!initialised && messageType === 'initialised_player') {
-        playerId = data.data.user.id
-        playerColour = data.data.user.colour
-        playerName = data.data.user.name
-        console.log(data.data)
+        const userData = data.data.user
+        playerId = userData.id
+        const playerColour = userData.colour
+        const playerName = userData.name
 
         if (data.data.players.length > 0) {
           initiateClientPlayers(data.data.players);
         }
 
-        player = new Player(0, 0, playerColour, playerName, playerId);
+        player = new Player(userData.x, userData.y, playerColour, playerName, playerId);
         initialised = true
         iterate()
         render()
@@ -125,13 +124,16 @@ function init() {
             break;
           }
       }
+
+      showPlayerCount()
     } catch (error) {
       console.error(error)
     }
   };
 
   initCanvas()
-  sendButton.addEventListener('click', () => {
+  sendForm.addEventListener('submit', (e) => {
+    e.preventDefault()
     let textInput = document.querySelector('#msg-box-input').value;
     if (textInput !== "") {
       send(JSON.stringify({type:"message", message:textInput, id:playerId}));
@@ -155,20 +157,13 @@ function updatePlayerMessages(messages) {
 }
 
 function closePlayer(closePlayerId) {
-  console.log(closePlayerId);
-  for (let index in clientPlayers) {
-    var closePlayer = clientPlayers[index];
-
-    if (closePlayer.id === closePlayerId.data) {
-      clientPlayers.splice(index);
-    }
-  }
+  clientPlayers = clientPlayers.filter((player) => closePlayer.id === closePlayerId.data)
 }
 
 function initiateClientPlayers(data) {
   const cps = data;
   for (let player of cps) {
-    let newPlayer = new Player(player.x, player.y, player.colour, player.name, player.id);
+    const newPlayer = new Player(player.x, player.y, player.colour, player.name, player.id);
     clientPlayers.push(newPlayer);
   }
 }
@@ -241,8 +236,8 @@ function move(){
 function checkWallCollision(newX, newY, mapSize) {
   if (newX < 0 || 
       newY < 0 || 
-      newX >= mapSize || 
-      newY >= mapSize) {
+      newX + playerSize >= mapSize || 
+      newY + playerSize >= mapSize) {
     return true
   } else {
     return false
@@ -266,6 +261,10 @@ function checkPlayerCollision(newX, newY, players) {
 function showConnectionStatus() {
   const statusMessage = connected ? 'Connected' : 'Not connected'
   statusElement.innerText = statusMessage
+}
+
+function showPlayerCount() {
+  playerCountElement.innerText = clientPlayers.length + 1
 }
 
 function initCanvas() {

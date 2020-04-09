@@ -7,11 +7,16 @@ const http = require('http')
 let history = []
 let players = []
 const playerColours = [
-  'red',
-  'blue',
-  'green',
-  'purple',
-  'pink'
+  '#16a085',
+  '#27ae60',
+  '#2980b9',
+  '#8e44ad',
+  '#2c3e50',
+  '#f39c12',
+  '#d35400',
+  '#c0392b',
+  '#bdc3c7',
+  '#7f8c8d'
 ]
 
 const server = http.createServer(function (request, response) {})
@@ -37,8 +42,8 @@ wss.on('connection', function connection(ws, request, client) {
           id: playerID,
           colour: randomPlayerColour(),
           name: playerID,
-          x: 0,
-          y: 0
+          x: 250,
+          y: 250
         }
         reply = JSON.stringify({
           data: {
