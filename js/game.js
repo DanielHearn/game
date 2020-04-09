@@ -219,25 +219,24 @@ function closePlayer(closePlayerId) {
 function initiateClientPlayers(data) {
   const cps = data;
   for (let otherPlayer of cps) {
-    const newPlayer = newsd Player(otherPlayer.x, otherPlayer.y, otherPlayer.colour, otherPlayer.name, otherPlayer.id);
+    const newPlayer = new Player(otherPlayer.x, otherPlayer.y, otherPlayer.colour, otherPlayer.name, otherPlayer.id);
     clientPlayers.push(newPlayer);
   }
 }
 
 function updatePlayerObjects(data) {
-  for (let p of data) {
-    let potentiallyNewPlayer = null;
-    for (let clientPlayer of clientPlayers) {
-      if (p.id === clientPlayer.id && player.id !== p.id) {
-        clientPlayer.x = p.x;
-        clientPlayer.y = p.y;
-        console.log(clientPlayer);
-        potentiallyNewPlayer = clientPlayer;
+  for (let updatedPlayer of data) {
+    if(player.id !== updatedPlayer.id) {
+      const matchingPlayers = clientPlayers.filter(clientPlayer => updatedPlayer.id === clientPlayer.id)
+      if(!matchingPlayers.length) {
+        const newClientPlayer = new Player(updatedPlayer.x, updatedPlayer.y, updatedPlayer.direction, updatedPlayer.colour, updatedPlayer.name, updatedPlayer.id)
+        clientPlayers.push(newClientPlayer);
+      } else {
+        const existingPlayer = matchingPlayers[0]
+        existingPlayer.x = updatedPlayer.x;
+        existingPlayer.y = updatedPlayer.y;
+        existingPlayer.direction = updatedPlayer.direction;
       }
-    }
-    if (potentiallyNewPlayer === null && p.id != player.id) {
-      potentiallyNewPlayer = new Player(p.x, p.y, p.colour, p.name, p.id);
-      clientPlayers.push(potentiallyNewPlayer);
     }
   }
 }
@@ -400,6 +399,9 @@ function drawMap() {
         // console.log(gameMap.tiles[i].colour);
       }
     }
+  }
+}
+  
 function getMousePositionInElement(element, event) {
   const rect = element.getBoundingClientRect()
   return {
