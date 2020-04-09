@@ -7,7 +7,6 @@ const http = require('http')
 let history = []
 let players = []
 const playerColours = [
-  '#22,160,133',
   '#27ae60',
   '#2980b9',
   '#8e44ad',

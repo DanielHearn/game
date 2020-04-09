@@ -14,8 +14,7 @@ const playerSize = 32
 const statusElement = document.querySelector('#connection_status')
 const playerCountElement = document.querySelector('#player_count')
 const sendForm = document.querySelector('#send_form')
-const playersToUpdate = [ ];
-const playerMessages = [ ];
+const messageInput = document.querySelector('#msg-box-input')
 const playerSpeed = 4.0;
 const mapSize = 500;
 let clientPlayers = [ ]; // List of local instances of other clients' players
@@ -55,7 +54,6 @@ function render() {
           playerSize + y > player.y) {
           opacity = 0.33
         }    
-        console.log(opacity)
         drawPlayer(x, y, client.colour, opacity, client.name, client.id, client.messages);
       }
     }
@@ -143,7 +141,8 @@ function init() {
   initCanvas()
   sendForm.addEventListener('submit', (e) => {
     e.preventDefault()
-    let textInput = document.querySelector('#msg-box-input').value;
+    let textInput = messageInput.value;
+    messageInput.value = ''
     if (textInput !== "") {
       send(JSON.stringify({type:"message", message:textInput, id:player.id}));
     }
@@ -155,10 +154,20 @@ function updatePlayerMessages(messages) {
 
   if (messageId === player.id) {
     player.messages.push(messages);
+    setTimeout(() => {
+      if(player.messages.length > 0) {
+        player.messages.shift();
+      }
+    }, 5000)
   } else {
-    for (const player of clientPlayers) {
-      if (player.id === messageId) {
-        player.messages.push(messages);
+    for (const otherPlayer of clientPlayers) {
+      if (otherPlayer.id === messageId) {
+        otherPlayer.messages.push(messages);
+        setTimeout(() => {
+          if(otherPlayer.messages.length > 0) {
+            otherPlayer.messages.shift();
+          }
+        }, 5000)
         return;
       }
     }
@@ -166,13 +175,13 @@ function updatePlayerMessages(messages) {
 }
 
 function closePlayer(closePlayerId) {
-  clientPlayers = clientPlayers.filter((player) => closePlayer.id === closePlayerId.data)
+  clientPlayers = clientPlayers.filter((otherPlayer) => otherPlayer.id !== closePlayerId.data)
 }
 
 function initiateClientPlayers(data) {
   const cps = data;
-  for (let player of cps) {
-    const newPlayer = new Player(player.x, player.y, player.colour, player.name, player.id);
+  for (let otherPlayer of cps) {
+    const newPlayer = new Player(otherPlayer.x, otherPlayer.y, otherPlayer.colour, otherPlayer.name, otherPlayer.id);
     clientPlayers.push(newPlayer);
   }
 }
@@ -291,10 +300,15 @@ function drawPlayer(x, y, colour, opacity, name, id, messages) {
   ctx.fillText(name, x-nameOffset, y-6);
 
   for (const index in messages) {
-    let msg = messages[index];
+    const msg = messages[index];
+    const messageText = msg.message
+    const messageY = y-(index*20)-20
     if (msg.id == id) {
+      ctx.fillStyle = 'black'
+      const messagePixelWidth = ctx.measureText(messageText).width
+      ctx.fillRect(x, messageY-10, messagePixelWidth + 10, 15, opacity)
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(msg.message, x, y-(index*10));
+      ctx.fillText(messageText, x+5, messageY);
     }
   }
 
@@ -308,17 +322,5 @@ class Player  {
     this.name = name;
     this.id = id;
     this.messages = [];
-    this.updateMessage();
-  }
-
-  updateMessage() {
-    let messages = this.messages;
-    setInterval(function() {
-      if(messages.length > 0) {
-        messages.pop();
-        this.messages = messages;
-      }
-
-    }, 5000);
   }
 }
