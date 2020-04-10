@@ -8,11 +8,9 @@ const mapColour = '#bdc3c7';
 const mapWidth = 30;
 const mapHeight = 30;
 
-
 let history = []
 let players = []
-
-var mapData = [];
+let mapData = [];
 
 const playerColours = [
   '#27ae60',
@@ -129,9 +127,18 @@ function broadcast(data) {
 }
 
 function initialiseNewMap() {
-  console.log("MAO");
+  console.log("Initialising map");
+  let goalCreated = false
   // Assume map is a square
   for (let i = 0; i < mapWidth*mapHeight; i ++) {
-    mapData[i] = 1; // 1 being a filled block for now, 0 being an empty block
+    let type = 1
+    const randomNumber = Math.random()
+    if(!goalCreated && i > (mapWidth*mapHeight) - 200) {
+      type = 3
+      goalCreated = true
+    } else if(randomNumber > 0.9) {
+      type = 2
+    }
+    mapData[i] = type
   }
 }
