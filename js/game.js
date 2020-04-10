@@ -18,6 +18,7 @@ const gameSpeed = 30;
 const cursorSize = 12;
 const cursorColour = 'black'
 const backgroundColour = '#3a3211'
+const skyColour = '#56b8fa'
 const tileColours = {
   0: '#644515',
   1: '#222',
@@ -483,6 +484,12 @@ class Camera {
   
   drawMap() {
     if (mapInitialised === true) {
+
+      // Draw sky
+      this.ctx.fillStyle = skyColour;
+      this.ctx.fillRect(-this.viewportWidth + this.x, -this.viewportHeight+ this.y, this.viewportWidth*2, this.viewportHeight);
+
+      // Draw map tiles
       for (let tile of gameMap.tiles) {
         this.ctx.fillStyle = tile.colour;
         this.ctx.fillRect(tile.x + this.x, tile.y + this.y, gameMap.tileSize, gameMap.tileSize);
