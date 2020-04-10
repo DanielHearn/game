@@ -394,6 +394,8 @@ class Camera {
     const differenceHeight = this.lastCanvasHeight - window.innerHeight
     this.lastCanvasWidth = window.innerWidth
     this.lastCanvasHeight = window.innerHeight
+    this.viewportWidth = window.innerWidth
+    this.viewportHeight = window.innerHeight
     
     this.x = this.x - (differenceWidth/2)
     this.y = this.y - (differenceHeight/2)
