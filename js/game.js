@@ -311,28 +311,49 @@ function checkTileCollision(newX, newY) {
   let topRCorner = (playerTilePositionX + (2)) + playerTilePositionY * gameMap.width; // that 2 can be changed into teh player width/tileSize
   let bottomLCorner = playerTilePositionX + (playerTilePositionY + (2)) * gameMap.width;
   let bottomRCorner = (playerTilePositionX + (2)) + (playerTilePositionY + (2)) * gameMap.width;
+  let top = (playerTilePositionX+1) + playerTilePositionY * gameMap.width;
+  let bottom = (playerTilePositionX + (1)) + (playerTilePositionY+2) * gameMap.width; // that 2 can be changed into teh player width/tileSize
+  let left = playerTilePositionX + (playerTilePositionY + (1)) * gameMap.width;
+  let right = (playerTilePositionX + (2)) + (playerTilePositionY + (1)) * gameMap.width;
   
+
   let topLTile = gameMap.tiles[topLCorner];
   let topRTile = gameMap.tiles[topRCorner];
   let bottomLTile = gameMap.tiles[bottomLCorner];
   let bottomRTile = gameMap.tiles[bottomRCorner];
+  let topTile = gameMap.tiles[top];
+  let bottomTile = gameMap.tiles[bottom];
+  let leftTile = gameMap.tiles[left];
+  let rightTile = gameMap.tiles[right];
 
   topLCorner = gameMap.mapData[topLCorner] !== 0;
   topRCorner = gameMap.mapData[topRCorner] !== 0;
   bottomLCorner = gameMap.mapData[bottomLCorner] !== 0;
   bottomRCorner = gameMap.mapData[bottomRCorner] !== 0;
+  top = gameMap.mapData[top] !== 0;
+  bottom = gameMap.mapData[bottom] !== 0;
+  left = gameMap.mapData[left] !== 0;
+  right = gameMap.mapData[right] !== 0;
 
   
   if (topLCorner) { collidingTiles.push(topLTile) }
   if (topRCorner) { collidingTiles.push(topRTile) }
   if (bottomLCorner) { collidingTiles.push(bottomLTile) }
   if (bottomRCorner) { collidingTiles.push(bottomRTile) }
+  if (top) { collidingTiles.push(topTile) }
+  if (bottom) { collidingTiles.push(bottomTile) }
+  if (left) { collidingTiles.push(leftTile) }
+  if (right) { collidingTiles.push(rightTile) }
 
   let collide = 
   (topLCorner) ||
   (topRCorner)||
   (bottomRCorner)||
-  (bottomLCorner);
+  (bottomLCorner) ||
+  (top) ||
+  (bottom)||
+  (left)||
+  (right);
 
   return collide;
 }
