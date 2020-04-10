@@ -43,6 +43,7 @@ let ctx
 let connected = false
 let gameFocused = true
 let tileDestroyRate = 0.1;
+let collidingTiles = [];
 let chatHistory = []
 
 window.onload = (event) => {
@@ -259,7 +260,7 @@ function move(){
 
   if(gameFocused) {
     if (player.x !== newX || player.y !== newY) {
-      if (!checkWallCollision(newX, newY, mapWidth, mapHeight)) {
+      if (!checkWallCollision(newX, newY, mapWidth, mapHeight) && !checkTileCollision(newX, newY)) {
         camera.x += player.x - newX;
         camera.y += player.y - newY;
         player.x = newX
@@ -268,20 +269,24 @@ function move(){
       send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
     }
     if (mapInitialised) {
-      for (let i = 0; i < gameMap.tiles.length; i ++) {
-        const tile = gameMap.tiles[i];
-        if (checkTileCollision(newX, newY, tile)) {
-          const tileInteracted = tile;
+      console.log(collidingTiles);
+      for (let tile of collidingTiles) {
+        const tileInteracted = tile;
+        let i = gameMap.tiles.findIndex(t => t === tile);
 
-          destroyTile(tileInteracted, i, function() {
-            gameMap.mapData[i] = 0;
-            gameMap.tiles[i] = new MapTile(tileColours[0], tileInteracted.x, tileInteracted.y, 0);
-            send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
-          });
-        }
+        destroyTile(tileInteracted, i, function() {
+          gameMap.mapData[i] = 0;
+          gameMap.tiles[i] = new MapTile(tileColours[0], tileInteracted.x, tileInteracted.y, 0);
+          send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
+        });
       }
+      collidingTiles = []
     }
   }
+}
+
+function getTileIndex(tile) {
+  return tile;
 }
 
 
@@ -290,15 +295,45 @@ function destroyTile(tile, i, callback) {
   if (hardness <= 0) {
     callback();
   } else {
+    let currentColour = tile.colour;
     tile.hardness -= tileDestroyRate;
-    let alpha = this.hardness / this.startingHardness;
-    alpha *= 10;
-    tile.colour = toString(alpha).padEnd(2, '0');
+    let alpha = tile.hardness / tile.startingHardness;
+    alpha = Math.floor(alpha * 100);
+    tile.colour = currentColour + toString(alpha);
   }
 }
 
-function checkTileCollision(newX, newY, tile) {
-  return tile.x < newX+playerSize && tile.x+gameMap.tileSize > newX && tile.y < newY + playerSize && tile.y+gameMap.tileSize > newY && tile.type>=1;
+function checkTileCollision(newX, newY) {
+  let playerTilePositionX = Math.floor(newX/gameMap.tileSize);
+  let playerTilePositionY = Math.floor(newY/gameMap.tileSize);
+  let topLCorner = playerTilePositionX + playerTilePositionY * gameMap.width;
+  let topRCorner = (playerTilePositionX + (2)) + playerTilePositionY * gameMap.width; // that 2 can be changed into teh player width/tileSize
+  let bottomLCorner = playerTilePositionX + (playerTilePositionY + (2)) * gameMap.width;
+  let bottomRCorner = (playerTilePositionX + (2)) + (playerTilePositionY + (2)) * gameMap.width;
+  
+  let topLTile = gameMap.tiles[topLCorner];
+  let topRTile = gameMap.tiles[topRCorner];
+  let bottomLTile = gameMap.tiles[bottomLCorner];
+  let bottomRTile = gameMap.tiles[bottomRCorner];
+
+  topLCorner = gameMap.mapData[topLCorner] !== 0;
+  topRCorner = gameMap.mapData[topRCorner] !== 0;
+  bottomLCorner = gameMap.mapData[bottomLCorner] !== 0;
+  bottomRCorner = gameMap.mapData[bottomRCorner] !== 0;
+
+  
+  if (topLCorner) { collidingTiles.push(topLTile) }
+  if (topRCorner) { collidingTiles.push(topRTile) }
+  if (bottomLCorner) { collidingTiles.push(bottomLTile) }
+  if (bottomRCorner) { collidingTiles.push(bottomRTile) }
+
+  let collide = 
+  (topLCorner) ||
+  (topRCorner)||
+  (bottomRCorner)||
+  (bottomLCorner);
+
+  return collide;
 }
 
 
