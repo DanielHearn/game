@@ -43,6 +43,7 @@ let connection = null
 let ctx
 let connected = false
 let gameFocused = true
+let tileDestroyRate = 0.1;
 let chatHistory = []
 
 window.onload = (event) => {
@@ -139,6 +140,7 @@ function init() {
             break;
           case 'update_map':
             updateMap(data.data);
+         
           }
       }
 
@@ -270,14 +272,27 @@ function move(){
       for (let i = 0; i < gameMap.tiles.length; i ++) {
         const tile = gameMap.tiles[i];
         if (checkTileCollision(newX, newY, tile)) {
-          
-          const tileToDelete = tile;
-          gameMap.mapData[i] = 0;
-          gameMap.tiles[i] = new MapTile(tileColours[0], tileToDelete.x, tileToDelete.y, 0);
-          send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
+          const tileInteracted = tile;
+
+          destroyTile(tileInteracted, i, function() {
+            gameMap.mapData[i] = 0;
+            gameMap.tiles[i] = new MapTile(tileColours[0], tileInteracted.x, tileInteracted.y, 0);
+            send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
+          });
         }
       }
     }
+  }
+}
+
+function destroyTile(tile, i, callback) {
+  var hardness = tile.hardness;
+  if (hardness <= 0) {
+    callback();
+  } else {
+    tile.colour.alpha
+    tile.hardness -= tileDestroyRate;
+    
   }
 }
 
@@ -376,6 +391,7 @@ class MapTile {
     this.x = x;
     this.y = y;
     this.type = type;
+    this.hardness = 1;    
   }
 }
 
