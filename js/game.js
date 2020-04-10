@@ -19,6 +19,12 @@ const playerSpeed = 4.0;
 const mapSize = 500;
 const cursorSize = 12;
 const cursorColour = 'black'
+const tileColours = {
+  0: '#ffffff',
+  1: '#222',
+  2: '#333',
+  3: '#27ae60'
+};
 let mousePosition = null
 let clientPlayers = [ ]; // List of local instances of other clients' players
 let activeKeys = {}
@@ -176,7 +182,7 @@ function updateMap(mapData) {
   switch (interactionType) {
     case 'delete':
       const tileToDelete = gameMap.tiles[tileIndex];
-      gameMap.tiles[tileIndex] = new MapTile(null, tileToDelete.x, tileToDelete.y, 0);
+      gameMap.tiles[tileIndex] = new MapTile(tileColours[0], tileToDelete.x, tileToDelete.y, 0);
       break;   
   }
     // gameMap.mapData = mapData;
@@ -267,16 +273,12 @@ function move(){
     alreadyMoving = true
   } 
 
-  if (player.x !== newX || player.y !== newY || player.direction !== player.lastDirection) {
+  if (player.x !== newX || player.y !== newY) {
     if (!checkWallCollision(newX, newY, mapSize)) {
       player.x = newX
       player.y = newY
     }
-    send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y, direction:player.direction}}))
-  }
-
-  if (player.direction !== player.lastDirection) {
-    player.lastDirection = player.direction
+    send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
   }
 
   if (mapInitialised) {
@@ -285,7 +287,7 @@ function move(){
       if (checkTileCollision(tile)) {
         const tileToDelete = tile;
         gameMap.mapData[i] = 0;
-        gameMap.tiles[i] = new MapTile(null, tileToDelete.x, tileToDelete.y, 0);
+        gameMap.tiles[i] = new MapTile(tileColours[0], tileToDelete.x, tileToDelete.y, 0);
         send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
       }
     }
@@ -294,8 +296,7 @@ function move(){
 }
 
 function checkTileCollision(tile) {
-  // console.log(tile);
-  return tile.x < player.x + playerSize && tile.x+gameMap.tileSize > player.x && tile.y < player.y+playerSize && tile.y+gameMap.tileSize > player.y && tile.type === 1;
+  return tile.x < player.x + playerSize && tile.x+gameMap.tileSize > player.x && tile.y < player.y+playerSize && tile.y+gameMap.tileSize > player.y && tile.type >= 1 && tile.type <= 2;
 }
 
 function checkWallCollision(newX, newY, mapSize) {
@@ -377,14 +378,9 @@ function drawMap() {
   if (mapInitialised === true) {
     for (let i = 0; i < gameMap.tiles.length; i ++ ) {
       let tile = gameMap.tiles[i];
-      switch (tile.type) {
-        case 1:
-          ctx.fillStyle = tile.colour;
-          ctx.fillRect(tile.x, tile.y, gameMap.tileSize, gameMap.tileSize);
-          break;
-        case 0:
-          break
-        // console.log(gameMap.tiles[i].colour);
+      if(tile.type > 0) {
+        ctx.fillStyle = tile.colour;
+        ctx.fillRect(tile.x, tile.y, gameMap.tileSize, gameMap.tileSize);
       }
     }
   }
@@ -400,16 +396,6 @@ function getMousePositionInElement(element, event) {
 
 function handleMouse(e) {
   mousePosition = getMousePositionInElement(canvas, e)
-  if(player) {
-    const vector = {
-      x: mousePosition.x - (player.x + playerSize),
-      y: mousePosition.y - (player.y + playerSize)
-    }
-    const angleRad = Math.acos(vector.x / Math.sqrt(vector.x*vector.x + vector.y*vector.y))
-    const angleDeg = angleRad * 180 / Math.PI;
-    player.lastDirection = player.direction
-    player.direction = angleDeg
-  }
 }
 
 class Player  {
@@ -417,7 +403,6 @@ class Player  {
     this.x = x;
     this.y = y;
     this.direction = direction;
-    this.lastDirection = direction
     this.colour = colour;
     this.name = name;
     this.id = id;
@@ -428,7 +413,6 @@ class Player  {
 
 class GameMap {
   constructor(colour, mapData, width, height) {
-    this.colour = colour;
     this.mapData = mapData;
     this.width = width;
     this.height = height;
@@ -438,18 +422,11 @@ class GameMap {
 
   initialiseTiles() {
     for (let i = 0; i < this.mapData.length; i ++) {
-      var tileX = Math.floor(i % this.width) * this.tileSize;
-      var tileY = Math.floor(i / this.height) * this.tileSize;
-      var tileType = this.mapData[i];
+      const tileX = Math.floor(i % this.width) * this.tileSize;
+      const tileY = Math.floor(i / this.height) * this.tileSize;
+      const tileType = this.mapData[i];
 
-      switch (tileType) {
-        case 1:
-          this.tiles.push(new MapTile(this.colour, tileX, tileY, 1));
-          break;
-        case 0:
-          this.tiles.push(new MapTile(this.colour, tileX, tileY, 0));
-          break;
-        }
+      this.tiles.push(new MapTile(tileColours[tileType], tileX, tileY, tileType));
     }
   }
 }
