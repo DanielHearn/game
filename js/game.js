@@ -376,8 +376,8 @@ class Camera {
     this.viewportHeight = this.lastCanvasHeight;
     
     this.canvas = document.createElement("canvas")
-    this.x = (this.viewportWidth - x - (playerSize/2)) - this.viewportWidth/2; 
-    this.y = (this.viewportHeight - y - (playerSize/2)) - this.viewportHeight/2; 
+    this.x = Math.floor((this.viewportWidth - x - (playerSize/2)) - this.viewportWidth/2)
+    this.y = Math.floor((this.viewportHeight - y - (playerSize/2)) - this.viewportHeight/2) 
 
     gameContainer.appendChild(this.canvas)
     this.setCanvasSize()
@@ -397,8 +397,8 @@ class Camera {
     this.viewportWidth = window.innerWidth
     this.viewportHeight = window.innerHeight
     
-    this.x = this.x - (differenceWidth/2)
-    this.y = this.y - (differenceHeight/2)
+    this.x =  Math.floor(this.x - (differenceWidth/2))
+    this.y =  Math.floor(this.y - (differenceHeight/2))
     this.canvas.width = window.innerWidth
     this.canvas.height = window.innerHeight
   }
