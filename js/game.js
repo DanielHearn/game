@@ -40,6 +40,7 @@ let mapWidth = 0;
 let connection = null
 let ctx
 let connected = false
+let gameFocused = true
 
 window.onload = (event) => {
   init()
@@ -63,6 +64,14 @@ function sendInitRequest() {
 
 function init() {
   console.log('Initialisation')
+
+  messageInput.addEventListener('focus', () => {
+    gameFocused = false
+  })
+  messageInput.addEventListener('blur', () => {
+    gameFocused = true
+  })
+
   connection = new WebSocket(`ws://${serverIP}:${serverPort}`)
 
   document.addEventListener('keydown', event => {
@@ -243,25 +252,26 @@ function move(){
     alreadyMoving = true
   } 
 
-  if (player.x !== newX || player.y !== newY) {
-    if (!checkWallCollision(newX, newY, mapWidth, mapHeight)) {
-      camera.x += player.x - newX;
-      camera.y += player.y - newY;
-      player.x = newX
-      player.y = newY
+  if(gameFocused) {
+    if (player.x !== newX || player.y !== newY) {
+      if (!checkWallCollision(newX, newY, mapWidth, mapHeight)) {
+        camera.x += player.x - newX;
+        camera.y += player.y - newY;
+        player.x = newX
+        player.y = newY
+      }
+      send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
     }
-    send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
-  }
-
-  if (mapInitialised) {
-    for (let i = 0; i < gameMap.tiles.length; i ++) {
-      const tile = gameMap.tiles[i];
-      if (checkTileCollision(newX, newY, tile)) {
-        
-        const tileToDelete = tile;
-        gameMap.mapData[i] = 0;
-        gameMap.tiles[i] = new MapTile(tileColours[0], tileToDelete.x, tileToDelete.y, 0);
-        send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
+    if (mapInitialised) {
+      for (let i = 0; i < gameMap.tiles.length; i ++) {
+        const tile = gameMap.tiles[i];
+        if (checkTileCollision(newX, newY, tile)) {
+          
+          const tileToDelete = tile;
+          gameMap.mapData[i] = 0;
+          gameMap.tiles[i] = new MapTile(tileColours[0], tileToDelete.x, tileToDelete.y, 0);
+          send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
+        }
       }
     }
   }
@@ -375,8 +385,7 @@ class Camera {
     this.ctx = this.canvas.getContext("2d");
     this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight)
     this.canvas.addEventListener('mousemove', handleMouse, false);
-    window.addEventListener( 'resize', this.setCanvasSize.bind(this), false)
-
+    window.addEventListener('resize', this.setCanvasSize.bind(this), false)
     this.render()
   }
 
