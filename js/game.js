@@ -284,14 +284,16 @@ function move(){
   }
 }
 
+
 function destroyTile(tile, i, callback) {
   var hardness = tile.hardness;
   if (hardness <= 0) {
     callback();
   } else {
-    tile.colour.alpha
     tile.hardness -= tileDestroyRate;
-    
+    let alpha = this.hardness / this.startingHardness;
+    alpha *= 10;
+    tile.colour = toString(alpha).padEnd(2, '0');
   }
 }
 
@@ -390,7 +392,8 @@ class MapTile {
     this.x = x;
     this.y = y;
     this.type = type;
-    this.hardness = 1;    
+    this.hardness = 1;
+    this.startingHardness = this.hardness;    
   }
 }
 
