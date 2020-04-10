@@ -1,7 +1,7 @@
 
 window.WebSocket = window.WebSocket || window.MozWebSocket
 
-const serverIP = '127.0.0.1'
+const serverIP = '81.154.80.108'
 //const serverIP = '192.168.0.27';
 
 const serverPort = '1337'

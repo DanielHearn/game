@@ -15,6 +15,8 @@
     "ws": "^7.2.3"
   },
   "dependencies": {
+    "bufferutil": "^4.0.1",
+    "utf-8-validate": "^5.0.2",
     "uuid": "^7.0.3"
   }
 }
