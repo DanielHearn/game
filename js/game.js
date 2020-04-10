@@ -12,6 +12,7 @@ const sendForm = document.querySelector('#send_form')
 const messageInput = document.querySelector('#msg-box-input')
 const gameContainer = document.querySelector('.game-container')
 const loadingElement = document.querySelector('#loading_status')
+const chatListElement = document.querySelector('#chat_list')
 const playerSpeed = 4.0;
 const gameSpeed = 30;
 const cursorSize = 12;
@@ -41,6 +42,7 @@ let connection = null
 let ctx
 let connected = false
 let gameFocused = true
+let chatHistory = []
 
 window.onload = (event) => {
   init()
@@ -170,7 +172,8 @@ function updateMap(mapData) {
 
 function updatePlayerMessages(messages) {
   const messageId = messages.id;
-
+  chatHistory.push(messages)
+  renderChatHistoryMessage(messages)
   if (messageId === player.id) {
     player.messages.push(messages);
     setTimeout(() => {
@@ -324,6 +327,13 @@ function getMousePositionInElement(element, event) {
 
 function handleMouse(e) {
   mousePosition = getMousePositionInElement(camera.canvas, e)
+}
+
+function renderChatHistoryMessage(message) {
+  const listElement = document.createElement('li')
+  listElement.innerText = `${message.id}: ${message.message}`
+  chatListElement.append(listElement)
+  chatListElement.scrollIntoView(false);
 }
 
 class Player  {

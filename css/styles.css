@@ -11,10 +11,43 @@ canvas {
 	cursor: none;
 }
 
+#send_form {
+	margin: 0 1em 0 0;
+}
+
 #overlay {
 	position: absolute;
 	color: white;
 	background: rgba(0, 0, 0, 0.25);
 	width: 100%;
 	padding: 0.5em;
+	display: flex;
+	align-items: flex-start;
+	height: 5em;
+}
+
+#overlay p {
+	margin: 0 1em 0 0;
+}
+
+#chat_history {
+	margin: 0 1em 0 0;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	height: 100%;
+	width: 25em;
+	background: #1f1f1f;
+	padding: 0.5em;
+	box-sizing: border-box;
+}
+
+#chat_list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	word-break: break-all;
+}
+
+#chat_list li {
+	padding-right: 0.25em;
 }
