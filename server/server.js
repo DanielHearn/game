@@ -153,7 +153,6 @@ function initialiseNewMap() {
     
     let fourthLayer = depth >= 80 && depth < 100;
     
-    console.log(firstLayer, secondLayer, thirdLayer, fourthLayer);
     if (firstLayer) {
       if (!firstSecondBlendLayer) {
         type = 3;
