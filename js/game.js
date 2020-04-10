@@ -9,10 +9,15 @@ const playerSize = 32
 const statusElement = document.querySelector('#connection_status')
 const playerCountElement = document.querySelector('#player_count')
 const sendForm = document.querySelector('#send_form')
-const messageInput = document.querySelector('#msg-box-input')
+const messageInput = document.querySelector('#msg_box_input')
 const gameContainer = document.querySelector('.game-container')
 const loadingElement = document.querySelector('#loading_status')
 const chatListElement = document.querySelector('#chat_list')
+const startButton = document.querySelector('#start')
+const nameInput = document.querySelector('#name_box_input')
+const gameWrapper = document.querySelector('#game')
+const introWrapper = document.querySelector('#intro')
+const nameForm = document.querySelector('#name_form')
 const playerSpeed = 4.0;
 const gameSpeed = 30;
 const cursorSize = 12;
@@ -43,7 +48,7 @@ let connection = null
 let ctx
 let connected = false
 let gameFocused = true
-let tileDestroyRate = 0.1;
+let tileDestroyRate = 0.5;
 let collidingTiles = [];
 let chatHistory = []
 
@@ -61,14 +66,27 @@ function iterate() {
   setTimeout(() => { iterate() }, 1000/gameSpeed)
 }
 
-function sendInitRequest() {
+function sendInitRequest(name) {
   send(JSON.stringify({
-    type: 'init_player'
+    type: 'init_player',
+    data: {
+      name: name
+    }
   }));
 }
 
 function init() {
   console.log('Initialisation')
+
+  nameForm.addEventListener('submit', (e) => {
+    e.preventDefault()
+    let name = nameInput.value;
+    console.log(name)
+    if (name !== "") {
+      sendInitRequest(name)
+    }
+  })
+
 
   messageInput.addEventListener('focus', () => {
     gameFocused = false
@@ -92,8 +110,8 @@ function init() {
   connection.onopen = function () {
     console.log('Connected')
     connected = true
-    showConnectionStatus()
-    sendInitRequest()
+    //showConnectionStatus()
+    //sendInitRequest()
   }
   
   connection.onerror = function (error) {
@@ -107,6 +125,9 @@ function init() {
       const previousPlayerCount = clientPlayers.length
       const messageType = data.type
       if (!mapInitialised && !initialised && messageType === 'initialised_player') {
+        introWrapper.style.display = 'none'
+        gameWrapper.style.display = 'flex'
+        showConnectionStatus()
         const userData = data.data.user
         const playerId = userData.id
         const playerColour = userData.colour
@@ -156,7 +177,7 @@ function init() {
     let textInput = messageInput.value;
     messageInput.value = ''
     if (textInput !== "") {
-      send(JSON.stringify({type:"message", message:textInput, id:player.id}));
+      send(JSON.stringify({type:"message", message:textInput, id:player.id, name:player.name}));
     }
   })
 }
@@ -405,7 +426,7 @@ function handleMouse(e) {
 
 function renderChatHistoryMessage(message) {
   const listElement = document.createElement('li')
-  listElement.innerText = `${message.id}: ${message.message}`
+  listElement.innerText = `${message.name}: ${message.message}`
   chatListElement.append(listElement)
   chatListElement.scrollIntoView(false);
 }

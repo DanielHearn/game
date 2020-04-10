@@ -47,7 +47,7 @@ wss.on('connection', function connection(ws, request, client) {
         const newUser = {
           id: playerID,
           colour: randomPlayerColour(),
-          name: playerID,
+          name: data.data.name,
           x: 75,
           y: 75,
           direction: 0

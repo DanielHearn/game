@@ -3,20 +3,30 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <div id="overlay">
-    <p>Status: <span id="connection_status">Not connected</span>, Player Count: <span id="player_count">-</span></p>
-    <form id="send_form">
-      <label for="msg-box-input">Chat: </label>
-      <input type="text" name="msg-box-input" id="msg-box-input">
-      <button id="send" type="submit">Send</button>
+  <div id="intro">
+    <h1>Game Title</h1>
+    <p>Enter a name to start</p>
+    <form id="name_form">
+      <input type="text" placeholder="Name" name="name_box_input" id="name_box_input">
+      <button id="start" type="submit">Start</button>
     </form>
-    <div id="chat_history">
-      <ul id="chat_list">
-
-      </ul>
-    </div>
   </div>
-   <div class="game-container">
+  <div id="game">
+    <div id="overlay">
+      <p>Status: <span id="connection_status">Not connected</span>, Player Count: <span id="player_count">-</span></p>
+      <form id="send_form">
+        <label for="msg_box_input">Chat: </label>
+        <input type="text" name="msg_box_input" id="msg_box_input">
+        <button id="send" type="submit">Send</button>
+      </form>
+      <div id="chat_history">
+        <ul id="chat_list">
+  
+        </ul>
+      </div>
+    </div>
+     <div class="game-container">
+    </div>
   </div>
   <script type="text/javascript" src='js/game.js'></script>
 </body>
