@@ -2,7 +2,7 @@
 window.WebSocket = window.WebSocket || window.MozWebSocket
 
 // const serverIP = '81.154.80.108'
-const serverIP = '192.168.0.27';
+const serverIP = '127.0.0.1';
 
 const serverPort = '1337'
 let connection = null
@@ -74,14 +74,14 @@ function render() {
           playerSize + y > player.y) {
           opacity = 0.33
         }    
-        drawPlayer(x, y, client.colour, opacity, client.name, client.id, client.messages);
+        drawPlayer(x + camera.x, y + camera.y, client.colour, opacity, client.name, client.id, client.messages);
       }
     }
   }
 
 
   // Draw user's player on top of other players
-  drawPlayer(player.x, player.y, player.colour, 1, player.name, player.id, player.messages)
+  drawPlayer(player.x + camera.x, player.y + camera.y, player.colour, 1, player.name, player.id, player.messages)
   drawCursor()
   
   window.requestAnimationFrame(render)
@@ -134,7 +134,6 @@ function init() {
         const height = data.height;
         gameMap = new GameMap(colour, mapData, width, height);
         gameMap.initialiseTiles();
-        console.log(gameMap, "FUCK")
         mapInitialised = true;
       }
       if (!initialised && messageType === 'initialised_player') {
@@ -144,7 +143,7 @@ function init() {
         const playerName = userData.name
 
         player = new Player(userData.x, userData.y, userData.direction, playerColour, playerName, playerId);
-        camera = new Camera(player.x, player.y);
+        camera = new Camera(mapSize - player.x - (playerSize/2), mapSize - player.y - (playerSize/2));
         initialised = true
         iterate()
         render()
@@ -193,8 +192,7 @@ function updateMap(mapData) {
       gameMap.tiles[tileIndex] = new MapTile(tileColours[0], tileToDelete.x, tileToDelete.y, 0);
       break;   
   }
-    // gameMap.mapData = mapData;
-    console.log(mapData);
+  // gameMap.mapData = mapData;
 }
 
 function updatePlayerMessages(messages) {
@@ -283,10 +281,10 @@ function move(){
 
   if (player.x !== newX || player.y !== newY) {
     if (!checkWallCollision(newX, newY, mapSize)) {
+      camera.x += player.x - newX;
+      camera.y += player.y - newY;
       player.x = newX
       player.y = newY
-      camera.x = newX;
-      camera.y = newY;
     }
     send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
   }
@@ -391,7 +389,7 @@ function drawMap() {
       let tile = gameMap.tiles[i];
       if(tile.type > 0) {
         ctx.fillStyle = tile.colour;
-        ctx.fillRect(tile.x, tile.y, gameMap.tileSize, gameMap.tileSize);
+        ctx.fillRect(tile.x + camera.x, tile.y + camera.y, gameMap.tileSize, gameMap.tileSize);
       }
     }
   }
