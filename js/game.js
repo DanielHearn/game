@@ -3,27 +3,24 @@ window.WebSocket = window.WebSocket || window.MozWebSocket
 
 // const serverIP = '81.154.80.108'
 const serverIP = '127.0.0.1';
-
 const serverPort = '1337'
-let connection = null
-let canvas
-let ctx
-let connected = false
 
 const playerSize = 32
 const statusElement = document.querySelector('#connection_status')
 const playerCountElement = document.querySelector('#player_count')
 const sendForm = document.querySelector('#send_form')
 const messageInput = document.querySelector('#msg-box-input')
+const gameContainer = document.querySelector('.game-container')
+const loadingElement = document.querySelector('#loading_status')
 const playerSpeed = 4.0;
-const mapSize = 500;
+const gameSpeed = 30;
 const cursorSize = 12;
 const cursorColour = 'black'
+const backgroundColour = '#3a3211'
 const tileColours = {
-  0: '#ffffff',
+  0: '#644515',
   1: '#222',
   2: '#333',
-
   3: '#758918',
   4: '#B68C5D',
   5: '#F0F0B5',
@@ -38,8 +35,11 @@ let mapInitialised = false;
 let player;
 let gameMap;
 let camera;
-
-const gameSpeed = 30;
+let mapHeight = 0;
+let mapWidth = 0;
+let connection = null
+let ctx
+let connected = false
 
 window.onload = (event) => {
   init()
@@ -55,44 +55,9 @@ function iterate() {
   setTimeout(() => { iterate() }, 1000/gameSpeed)
 }
 
-function render() {
-  ctx.fillStyle = '#666';
-  ctx.fillRect(0, 0, 500, 500);
-  drawMap();
-
-  if (clientPlayers.length !== 0) {
-    for (const client of clientPlayers) {
-      if (client.id !== player.id) {
-        const x = client.x
-        const y = client.y
-        const direction = client.direction
-        let opacity = 1
-
-        if (x < player.x + playerSize &&
-          x + playerSize > player.x &&
-          y < player.y + playerSize &&
-          playerSize + y > player.y) {
-          opacity = 0.33
-        }    
-        drawPlayer(x + camera.x, y + camera.y, client.colour, opacity, client.name, client.id, client.messages);
-      }
-    }
-  }
-
-
-  // Draw user's player on top of other players
-  drawPlayer(player.x + camera.x, player.y + camera.y, player.colour, 1, player.name, player.id, player.messages)
-  drawCursor()
-  
-  window.requestAnimationFrame(render)
-}
-
 function sendInitRequest() {
   send(JSON.stringify({
     type: 'init_player'
-  }));
-  send(JSON.stringify({
-    type: 'init_map'
   }));
 }
 
@@ -127,26 +92,26 @@ function init() {
       console.log('Received: ' + message.data)
       const previousPlayerCount = clientPlayers.length
       const messageType = data.type
-      if (!mapInitialised && messageType === 'initialised_map') {
-        const colour = data.colour;
-        const mapData = data.mapData;
-        const width = data.width;
-        const height = data.height;
-        gameMap = new GameMap(colour, mapData, width, height);
-        gameMap.initialiseTiles();
-        mapInitialised = true;
-      }
-      if (!initialised && messageType === 'initialised_player') {
+      if (!mapInitialised && !initialised && messageType === 'initialised_player') {
         const userData = data.data.user
         const playerId = userData.id
         const playerColour = userData.colour
         const playerName = userData.name
+        const mapInfo = data.data.map
+        const colour = mapInfo.colour;
+        const mapData = mapInfo.mapData;
+        const width = mapInfo.width;
+        const height = mapInfo.height;
+        gameMap = new GameMap(colour, mapData, width, height);
+        mapWidth = width * gameMap.tileSize
+        mapHeight = height * gameMap.tileSize
+        gameMap.initialiseTiles();
+        mapInitialised = true;
 
         player = new Player(userData.x, userData.y, userData.direction, playerColour, playerName, playerId);
-        camera = new Camera(mapSize - player.x - (playerSize/2), mapSize - player.y - (playerSize/2));
+        camera = new Camera(player.x, player.y);
         initialised = true
         iterate()
-        render()
       } 
 
       if(initialised) {
@@ -171,7 +136,6 @@ function init() {
     }
   };
 
-  initCanvas()
   sendForm.addEventListener('submit', (e) => {
     e.preventDefault()
     let textInput = messageInput.value;
@@ -280,7 +244,7 @@ function move(){
   } 
 
   if (player.x !== newX || player.y !== newY) {
-    if (!checkWallCollision(newX, newY, mapSize)) {
+    if (!checkWallCollision(newX, newY, mapWidth, mapHeight)) {
       camera.x += player.x - newX;
       camera.y += player.y - newY;
       player.x = newX
@@ -308,11 +272,11 @@ function checkTileCollision(newX, newY, tile) {
 }
 
 
-function checkWallCollision(newX, newY, mapSize) {
+function checkWallCollision(newX, newY, mapWidth, mapHeight) {
   if (newX < 0 || 
       newY < 0 || 
-      newX + playerSize >= mapSize || 
-      newY + playerSize >= mapSize) {
+      newX + playerSize >= mapWidth || 
+      newY + playerSize >= mapHeight) {
     return true
   } else {
     return false
@@ -339,61 +303,6 @@ function showConnectionStatus() {
 function showPlayerCount() {
   playerCountElement.innerText = clientPlayers.length + 1
 }
-
-function initCanvas() {
-  canvas = document.querySelector("#drawable");
-  ctx = canvas.getContext("2d");
-  ctx.fillRect(0, 0, 500, 500)
-  canvas.addEventListener('mousemove', handleMouse, false);
-}
-
-function drawCursor() {
-  if (mousePosition) {
-    ctx.fillStyle = cursorColour
-    const gap = cursorSize*0.4
-    const size = cursorSize*0.8
-    const x = mousePosition.x - size
-    const y = mousePosition.y - size
-    ctx.fillRect(x, y + size, size, size / 2)
-    ctx.fillRect(x + size + gap, y + size, size, size / 2)
-    ctx.fillRect(x + size, y, size/2, size)
-    ctx.fillRect(x + size, y + size + gap, size / 2, size)
-  }
-}
-
-function drawPlayer(x, y, colour, opacity, name, id, messages) {
-  ctx.globalAlpha = opacity;
-  ctx.fillStyle = colour
-  ctx.fillRect(x, y, playerSize, playerSize, opacity)
-  ctx.fillStyle = '#FFFFFF';
-  const nameOffset = name.length > 10 ? name.length*2 : 0
-  ctx.fillText(name, x-nameOffset, y-6);
-
-  for (const index in messages) {
-    const msg = messages[index];
-    const messageText = msg.message
-    const messageY = y-(index*20)-20
-    if (msg.id == id) {
-      ctx.fillStyle = 'black'
-      const messagePixelWidth = ctx.measureText(messageText).width
-      ctx.fillRect(x, messageY-10, messagePixelWidth + 10, 15, opacity)
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(messageText, x+5, messageY);
-    }
-  }
-}
-
-function drawMap() {
-  if (mapInitialised === true) {
-    for (let i = 0; i < gameMap.tiles.length; i ++ ) {
-      let tile = gameMap.tiles[i];
-      if(tile.type > 0) {
-        ctx.fillStyle = tile.colour;
-        ctx.fillRect(tile.x + camera.x, tile.y + camera.y, gameMap.tileSize, gameMap.tileSize);
-      }
-    }
-  }
-}
   
 function getMousePositionInElement(element, event) {
   const rect = element.getBoundingClientRect()
@@ -404,7 +313,7 @@ function getMousePositionInElement(element, event) {
 }
 
 function handleMouse(e) {
-  mousePosition = getMousePositionInElement(canvas, e)
+  mousePosition = getMousePositionInElement(camera.canvas, e)
 }
 
 class Player  {
@@ -451,10 +360,112 @@ class MapTile {
 
 class Camera {
   constructor(x, y) {
-    this.viewportWidth = 500;
-    this.viewportHeight = 500;
+    this.lastCanvasWidth = window.innerWidth
+    this.lastCanvasHeight = window.innerHeight
+    this.viewportWidth = this.lastCanvasWidth;
+    this.viewportHeight = this.lastCanvasHeight;
     
-    this.x = x - this.viewportWidth/2; 
-    this.y = y - this.viewportHeight/2;
+    this.canvas = document.createElement("canvas")
+    this.x = (this.viewportWidth - x - (playerSize/2)) - this.viewportWidth/2; 
+    this.y = (this.viewportHeight - y - (playerSize/2)) - this.viewportHeight/2; 
+
+    gameContainer.appendChild(this.canvas)
+    this.setCanvasSize()
+    this.ctx = this.canvas.getContext("2d")
+    this.ctx = this.canvas.getContext("2d");
+    this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight)
+    this.canvas.addEventListener('mousemove', handleMouse, false);
+    window.addEventListener( 'resize', this.setCanvasSize.bind(this), false)
+
+    this.render()
+  }
+
+  setCanvasSize() {
+    const differenceWidth = this.lastCanvasWidth - window.innerWidth
+    const differenceHeight = this.lastCanvasHeight - window.innerHeight
+    this.lastCanvasWidth = window.innerWidth
+    this.lastCanvasHeight = window.innerHeight
+    
+    this.x = this.x - (differenceWidth/2)
+    this.y = this.y - (differenceHeight/2)
+    this.canvas.width = window.innerWidth
+    this.canvas.height = window.innerHeight
+  }
+
+  render() {
+    this.ctx.fillStyle = backgroundColour;
+    this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
+    this.drawMap();
+  
+    if (clientPlayers.length !== 0) {
+      for (const client of clientPlayers) {
+        if (client.id !== player.id) {
+          const x = client.x
+          const y = client.y
+          const direction = client.direction
+          let opacity = 1
+  
+          if (x < player.x + playerSize &&
+            x + playerSize > player.x &&
+            y < player.y + playerSize &&
+            playerSize + y > player.y) {
+            opacity = 0.33
+          }    
+          this.drawPlayer(x + this.x, y + this.y, client.colour, opacity, client.name, client.id, client.messages);
+        }
+      }
+    }
+  
+  
+    // Draw user's player on top of other players
+    this.drawPlayer(player.x + this.x, player.y + this.y, player.colour, 1, player.name, player.id, player.messages)
+    this.drawCursor()
+    
+    window.requestAnimationFrame(this.render.bind(this))
+  }
+
+  drawCursor() {
+    if (mousePosition) {
+      this.ctx.fillStyle = cursorColour
+      const gap = cursorSize*0.4
+      const size = cursorSize*0.8
+      const x = mousePosition.x - size
+      const y = mousePosition.y - size
+      this.ctx.fillRect(x, y + size, size, size / 2)
+      this.ctx.fillRect(x + size + gap, y + size, size, size / 2)
+      this.ctx.fillRect(x + size, y, size/2, size)
+      this.ctx.fillRect(x + size, y + size + gap, size / 2, size)
+    }
+  }
+  
+  drawPlayer(x, y, colour, opacity, name, id, messages) {
+    this.ctx.globalAlpha = opacity;
+    this.ctx.fillStyle = colour
+    this.ctx.fillRect(x, y, playerSize, playerSize, opacity)
+    this.ctx.fillStyle = '#FFFFFF';
+    const nameOffset = name.length > 10 ? name.length*2 : 0
+    this.ctx.fillText(name, x-nameOffset, y-6);
+  
+    for (const index in messages) {
+      const msg = messages[index];
+      const messageText = msg.message
+      const messageY = y-(index*20)-20
+      if (msg.id == id) {
+        this.ctx.fillStyle = 'black'
+        const messagePixelWidth = this.ctx.measureText(messageText).width
+        this.ctx.fillRect(x, messageY-10, messagePixelWidth + 10, 15, opacity)
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.fillText(messageText, x+5, messageY);
+      }
+    }
+  }
+  
+  drawMap() {
+    if (mapInitialised === true) {
+      for (let tile of gameMap.tiles) {
+        this.ctx.fillStyle = tile.colour;
+        this.ctx.fillRect(tile.x + this.x, tile.y + this.y, gameMap.tileSize, gameMap.tileSize);
+      }
+    }
   }
 }

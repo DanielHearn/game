@@ -55,7 +55,13 @@ wss.on('connection', function connection(ws, request, client) {
         reply = JSON.stringify({
           data: {
             user: newUser,
-            players: players
+            players: players,
+            map: {
+              mapData: mapData, 
+              colour: mapColour,
+              width: mapWidth,
+              height:mapHeight
+            }
           },
           type: 'initialised_player'
         });
@@ -69,8 +75,6 @@ wss.on('connection', function connection(ws, request, client) {
           type: 'players'
         });
         broadcast(reply)
-      } else if (messageType === 'init_map') {
-        broadcast(JSON.stringify({type:'initialised_map', mapData: mapData, colour:mapColour, width:mapWidth, height:mapHeight}));
       } else if (messageType === 'move') {
         for (let player of players) {
           if (player.id === data.data.id) {
