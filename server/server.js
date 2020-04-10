@@ -6,7 +6,7 @@ const WebSocket = require('ws');
 const http = require('http')
 const mapColour = '#bdc3c7';
 const mapWidth = 30;
-const mapHeight = 30;
+const mapHeight = 100;
 
 let history = []
 let players = []
@@ -126,19 +126,59 @@ function broadcast(data) {
   });
 }
 
+function blendTiles(type1, type2) {
+  const randomNumber = Math.random()
+  return randomNumber >= 0.5 ? type1 : type2;
+}
+
 function initialiseNewMap() {
   console.log("Initialising map");
   let goalCreated = false
   // Assume map is a square
   for (let i = 0; i < mapWidth*mapHeight; i ++) {
     let type = 1
-    const randomNumber = Math.random()
-    if(!goalCreated && i > (mapWidth*mapHeight) - 200) {
-      type = 3
-      goalCreated = true
-    } else if(randomNumber > 0.9) {
-      type = 2
+    let depth = Math.floor(i / mapWidth);
+    let firstLayer = depth >= 0 && depth < 40;
+    let firstSecondBlendLayer = depth > 30 && depth < 40;
+    
+    let secondLayer = depth >= 40 && depth < 60;
+    let secondThirdBlendLayer = depth > 50 && depth < 60;
+    
+    let thirdLayer = depth >= 60 && depth < 80;
+    let thirdFourthBlendLayer = depth > 70 && depth < 80;
+    
+    let fourthLayer = depth >= 80 && depth < 100;
+    
+    console.log(firstLayer, secondLayer, thirdLayer, fourthLayer);
+    if (firstLayer) {
+      if (!firstSecondBlendLayer) {
+        type = 3;
+      } else {
+        type = blendTiles(3, 4);
+      }
+    }  if (secondLayer) {
+      if (!secondThirdBlendLayer) {
+        type = 4;
+      } else {
+        type = blendTiles(4, 5);
+      }
+    }  if (thirdLayer) {
+      if (!thirdFourthBlendLayer) {
+        type = 5;
+      } else {
+        type = blendTiles(5, 6);
+      }
+    }  if (fourthLayer) {
+        type = 6;
     }
+    
+    // const randomNumber = Math.random()
+    // if(!goalCreated && i > (mapWidth*mapHeight) - 200) {
+    //   type = 3
+    //   goalCreated = true
+    // } else if(randomNumber > 0.9) {
+    //   type = 2
+    // }
     mapData[i] = type
   }
 }

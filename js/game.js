@@ -1,8 +1,8 @@
 
 window.WebSocket = window.WebSocket || window.MozWebSocket
 
-const serverIP = '81.154.80.108'
-//const serverIP = '192.168.0.27';
+// const serverIP = '81.154.80.108'
+const serverIP = '192.168.0.27';
 
 const serverPort = '1337'
 let connection = null
@@ -23,7 +23,12 @@ const tileColours = {
   0: '#ffffff',
   1: '#222',
   2: '#333',
-  3: '#27ae60'
+
+  3: '#758918',
+  4: '#B68C5D',
+  5: '#F0F0B5',
+  6: '#7C8485',
+  7: '#392B1B',
 };
 let mousePosition = null
 let clientPlayers = [ ]; // List of local instances of other clients' players
@@ -32,6 +37,8 @@ let initialised = false
 let mapInitialised = false;
 let player;
 let gameMap;
+let camera;
+
 const gameSpeed = 30;
 
 window.onload = (event) => {
@@ -51,7 +58,6 @@ function iterate() {
 function render() {
   ctx.fillStyle = '#666';
   ctx.fillRect(0, 0, 500, 500);
-
   drawMap();
 
   if (clientPlayers.length !== 0) {
@@ -72,6 +78,7 @@ function render() {
       }
     }
   }
+
 
   // Draw user's player on top of other players
   drawPlayer(player.x, player.y, player.colour, 1, player.name, player.id, player.messages)
@@ -137,6 +144,7 @@ function init() {
         const playerName = userData.name
 
         player = new Player(userData.x, userData.y, userData.direction, playerColour, playerName, playerId);
+        camera = new Camera(player.x, player.y);
         initialised = true
         iterate()
         render()
@@ -277,6 +285,8 @@ function move(){
     if (!checkWallCollision(newX, newY, mapSize)) {
       player.x = newX
       player.y = newY
+      camera.x = newX;
+      camera.y = newY;
     }
     send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
   }
@@ -284,20 +294,21 @@ function move(){
   if (mapInitialised) {
     for (let i = 0; i < gameMap.tiles.length; i ++) {
       const tile = gameMap.tiles[i];
-      if (checkTileCollision(tile)) {
+      if (checkTileCollision(newX, newY, tile)) {
+        
         const tileToDelete = tile;
         gameMap.mapData[i] = 0;
         gameMap.tiles[i] = new MapTile(tileColours[0], tileToDelete.x, tileToDelete.y, 0);
         send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
       }
     }
-    
   }
 }
 
-function checkTileCollision(tile) {
-  return tile.x < player.x + playerSize && tile.x+gameMap.tileSize > player.x && tile.y < player.y+playerSize && tile.y+gameMap.tileSize > player.y && tile.type >= 1 && tile.type <= 2;
+function checkTileCollision(newX, newY, tile) {
+  return tile.x < newX+playerSize && tile.x+gameMap.tileSize > newX && tile.y < newY + playerSize && tile.y+gameMap.tileSize > newY && tile.type>=1;
 }
+
 
 function checkWallCollision(newX, newY, mapSize) {
   if (newX < 0 || 
@@ -423,7 +434,7 @@ class GameMap {
   initialiseTiles() {
     for (let i = 0; i < this.mapData.length; i ++) {
       const tileX = Math.floor(i % this.width) * this.tileSize;
-      const tileY = Math.floor(i / this.height) * this.tileSize;
+      const tileY = Math.floor(i / this.width) * this.tileSize;
       const tileType = this.mapData[i];
 
       this.tiles.push(new MapTile(tileColours[tileType], tileX, tileY, tileType));
@@ -437,5 +448,15 @@ class MapTile {
     this.x = x;
     this.y = y;
     this.type = type;
+  }
+}
+
+class Camera {
+  constructor(x, y) {
+    this.viewportWidth = 500;
+    this.viewportHeight = 500;
+    
+    this.x = x - this.viewportWidth/2; 
+    this.y = y - this.viewportHeight/2;
   }
 }
