@@ -34,6 +34,8 @@ const tileColours = {
   6: '#7C8485',
   7: '#392B1B',
 };
+const fontSize = 14
+const fontFamily = 'Noto Sans'
 let mousePosition = null
 let clientPlayers = [ ]; // List of local instances of other clients' players
 let activeKeys = {}
@@ -291,7 +293,7 @@ function move(){
       send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
     }
     if (mapInitialised) {
-      console.log(collidingTiles);
+      //console.log(collidingTiles);
       for (let tile of collidingTiles) {
         const tileInteracted = tile;
         let i = gameMap.tiles.findIndex(t => t === tile);
@@ -490,6 +492,7 @@ class Camera {
     this.setCanvasSize()
     this.ctx = this.canvas.getContext("2d")
     this.ctx = this.canvas.getContext("2d");
+    this.ctx.font = `${fontSize}px ${fontFamily}`
     this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight)
     this.canvas.addEventListener('mousemove', handleMouse, false);
     window.addEventListener('resize', this.setCanvasSize.bind(this), false)
@@ -567,13 +570,14 @@ class Camera {
     for (const index in messages) {
       const msg = messages[index];
       const messageText = msg.message
-      const messageY = y-(index*20)-20
       if (msg.id == id) {
         this.ctx.fillStyle = 'black'
-        const messagePixelWidth = this.ctx.measureText(messageText).width
-        this.ctx.fillRect(x, messageY-10, messagePixelWidth + 10, 15, opacity)
+        const messageSize = this.ctx.measureText(messageText)
+        console.log(messageSize)
+        const messageY = y-(index*20)-(messageSize.actualBoundingBoxAscent*3)
+        this.ctx.fillRect(x, messageY-(messageSize.actualBoundingBoxAscent/1.5), messageSize.width + 10, messageSize.actualBoundingBoxAscent + (messageSize.actualBoundingBoxAscent/1.5), opacity)
         this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.fillText(messageText, x+5, messageY);
+        this.ctx.fillText(messageText, x+5, messageY+(messageSize.actualBoundingBoxAscent/1.5));
       }
     }
   }

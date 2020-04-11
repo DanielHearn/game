@@ -1,6 +1,7 @@
 body {
 	margin: 0;
 	overflow: hidden;
+	font-family: 'Noto Sans', sans-serif;
 }
 
 .game-container {
@@ -63,4 +64,5 @@ canvas {
 
 #game {
 	display: none;
+	font-size: 14px;
 }
