@@ -209,7 +209,7 @@ function updateMap(mapData) {
       }
       break;   
   }
-  gameMap.mapData = mapData;
+  gameMap.mapData = newMapData;
 }
 
 function updatePlayerMessages(messages) {
