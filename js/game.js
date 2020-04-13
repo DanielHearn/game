@@ -1,3 +1,4 @@
+// import { IgnorePlugin } from "webpack";
 
 window.WebSocket = window.WebSocket || window.MozWebSocket
 
@@ -49,10 +50,12 @@ let mapWidth = 0;
 let connection = null
 let ctx
 let connected = false
+let destroying = false;
 let gameFocused = true
 let tileDestroyRate = 0.5;
 let collidingTiles = [];
 let chatHistory = []
+let particles = []; // place to store all particles in the scene
 
 window.onload = (event) => {
   init()
@@ -60,11 +63,13 @@ window.onload = (event) => {
 
 function send(msg) {
   connection.send(msg)
-  console.log(`Sent message: ${msg}`)
+  // console.log(`Sent message: ${msg}`)
 }
 
 function iterate() {
   move()
+  updateParticles();
+
   setTimeout(() => { iterate() }, 1000/gameSpeed)
 }
 
@@ -123,7 +128,7 @@ function init() {
   connection.onmessage = function (message) {
     try {
       const data = JSON.parse(message.data)
-      console.log('Received: ' + message.data)
+      // console.log('Received: ' + message.data)
       const previousPlayerCount = clientPlayers.length
       const messageType = data.type
       if (!mapInitialised && !initialised && messageType === 'initialised_player') {
@@ -162,9 +167,11 @@ function init() {
           case 'message':
             updatePlayerMessages(data);
             break;
-          case 'update_map':
+          case 'update_map': // This needs to change so it doesn't send it back to the original player
             updateMap(data.data);
-         
+            break;
+          case 'create_particle':
+            createLocalParticle(data.data);
           }
       }
 
@@ -184,17 +191,25 @@ function init() {
   })
 }
 
+function createLocalParticle(data) {
+  for (let i = 0; i < data.rate; i ++) {
+    particles.push(new Particle(data.x, data.y));
+  }
+}
+
 function updateMap(mapData) {
-  let tileIndex = mapData.index;
+  let tileIndexes = mapData.index;
   let interactionType = mapData.type;
   let newMapData = mapData.newMapData;
   switch (interactionType) {
     case 'delete':
-      const tileToDelete = gameMap.tiles[tileIndex];
-      gameMap.tiles[tileIndex] = new MapTile(tileColours[0], tileToDelete.x, tileToDelete.y, 0);
+      for (let tile of tileIndexes) {
+        const tileToDelete = gameMap.tiles[tile];
+        gameMap.tiles[tile] = new MapTile(tileColours[0], tileToDelete.x, tileToDelete.y, 0);
+      }
       break;   
   }
-  // gameMap.mapData = mapData;
+  gameMap.mapData = mapData;
 }
 
 function updatePlayerMessages(messages) {
@@ -227,6 +242,20 @@ function closePlayer(closePlayerId) {
   clientPlayers = clientPlayers.filter((otherPlayer) => otherPlayer.id !== closePlayerId.data)
 }
 
+function updateParticles() {
+  for (let index in particles) {
+    let particle = particles[index];
+    if (particle.life <= 0) {
+      particles.splice(index);
+    } else {
+      particle.decay(0.5);
+      particle.originY -= particle.life * Math.random();
+      particle.originX += (particle.life * particle.direction) * 0.3;
+    }
+    
+  }
+}
+
 function updatePlayerObjects(data) {
   for (let updatedPlayer of data) {
     if(player.id !== updatedPlayer.id) {
@@ -248,6 +277,7 @@ function move(){
   let newX = player.x
   let newY = player.y
   let alreadyMoving = false
+  destroying = false;
   if (activeKeys['a']) {
     if(alreadyMoving) {
       newX -= playerSpeed/2
@@ -282,6 +312,10 @@ function move(){
     alreadyMoving = true
   } 
 
+  if (activeKeys['f']) {
+    destroying = true;
+  }
+
   if(gameFocused) {
     if (player.x !== newX || player.y !== newY) {
       if (!checkWallCollision(newX, newY, mapWidth, mapHeight) && !checkTileCollision(newX, newY)) {
@@ -293,18 +327,24 @@ function move(){
       send(JSON.stringify({type: 'move', data: {id:player.id, x:player.x, y:player.y}}))
     }
     if (mapInitialised) {
-      //console.log(collidingTiles);
+      for (let tile of gameMap.tiles) {
+        let index = tile.x+tile.y*gameMap.width;
+        let colliding = collidingTiles.findIndex(t => (t.x+t.y*gameMap.width) === index) !== -1;
+        tile.highlight(colliding);
+      }
+      let sendToDestroy = []
       for (let tile of collidingTiles) {
-        const tileInteracted = tile;
         let i = gameMap.tiles.findIndex(t => t === tile);
-
-        destroyTile(tileInteracted, i, function() {
+        if (!destroying) return;
+        destroyTile(tile, i, function() {
           gameMap.mapData[i] = 0;
-          gameMap.tiles[i] = new MapTile(tileColours[0], tileInteracted.x, tileInteracted.y, 0);
-          send(JSON.stringify({type:'update_map', tileIndex:i, tileInteraction:'delete'}));
+          gameMap.tiles[i] = new MapTile(tileColours[0], tile.x, tile.y, 0);
+          sendToDestroy.push(i);
         });
       }
-      collidingTiles = []
+      if (sendToDestroy.length > 0) {
+        send(JSON.stringify({type:'update_map', tileIndexes:sendToDestroy, tileInteraction:'delete'}));
+      }
     }
   }
 }
@@ -313,10 +353,19 @@ function getTileIndex(tile) {
   return tile;
 }
 
+function createNewParticle(x, y, rate) {
+  for (let i = 0; i < rate; i ++) {
+    particles.push(new Particle(x, y));
+  }
+
+  send(JSON.stringify({type:'create_particle', x:x, y:y, rate:rate}))
+}
+
 
 function destroyTile(tile, i, callback) {
   var hardness = tile.hardness;
   if (hardness <= 0) {
+    createNewParticle(tile.x, tile.y, 4);
     callback();
   } else {
     let currentColour = tile.colour;
@@ -328,6 +377,7 @@ function destroyTile(tile, i, callback) {
 }
 
 function checkTileCollision(newX, newY) {
+  collidingTiles = [];
   let playerTilePositionX = Math.floor(newX/gameMap.tileSize);
   let playerTilePositionY = Math.floor(newY/gameMap.tileSize);
   let topLCorner = playerTilePositionX + playerTilePositionY * gameMap.width;
@@ -359,14 +409,14 @@ function checkTileCollision(newX, newY) {
   right = gameMap.mapData[right] !== 0;
 
   
-  if (topLCorner) { collidingTiles.push(topLTile) }
-  if (topRCorner) { collidingTiles.push(topRTile) }
-  if (bottomLCorner) { collidingTiles.push(bottomLTile) }
-  if (bottomRCorner) { collidingTiles.push(bottomRTile) }
-  if (top) { collidingTiles.push(topTile) }
-  if (bottom) { collidingTiles.push(bottomTile) }
-  if (left) { collidingTiles.push(leftTile) }
-  if (right) { collidingTiles.push(rightTile) }
+  if (topLCorner && topLTile.type !== 0) { collidingTiles.push(topLTile) }
+  if (topRCorner && topRTile.type !== 0) { collidingTiles.push(topRTile) }
+  if (bottomLCorner && bottomLTile.type !== 0) { collidingTiles.push(bottomLTile) }
+  if (bottomRCorner && bottomRTile.type !== 0) { collidingTiles.push(bottomRTile) }
+  if (top && topTile.type !== 0) { collidingTiles.push(topTile) }
+  if (bottom && bottomTile.type !== 0) { collidingTiles.push(bottomTile) }
+  if (left && leftTile.type !== 0) { collidingTiles.push(leftTile) }
+  if (right && rightTile.type !== 0) { collidingTiles.push(rightTile) }
 
   let collide = 
   (topLCorner) ||
@@ -469,14 +519,56 @@ class GameMap {
 class MapTile {
   constructor(colour, x, y, type) {
     this.colour = colour;
+    this.startingColour = this.colour;
+    this.highlightColour = this.highlightTile();
     this.x = x;
     this.y = y;
     this.type = type;
     this.hardness = 1;
     this.startingHardness = this.hardness;    
   }
-}
 
+  highlight(highlight) {
+    this.colour = highlight ? this.highlightColour : this.startingColour;
+  } 
+  
+  highlightTile() {
+    let col = this.colour;
+    let amt = 20;
+  
+    var usePound = false;
+    if ( col[0] == "#" ) {
+        col = col.slice(1);
+        usePound = true;
+    }
+    var num = parseInt(col,16);
+    var r = (num >> 16) + amt;
+    if ( r > 255 ) r = 255;
+    else if  (r < 0) r = 0;
+    var b = ((num >> 8) & 0x00FF) + amt;
+    if ( b > 255 ) b = 255;
+    else if  (b < 0) b = 0;
+    var g = (num & 0x0000FF) + amt;
+    if ( g > 255 ) g = 255;
+    else if  ( g < 0 ) g = 0;
+    let colour = (usePound?"#":"") + (g | (b << 8) | (r << 16)).toString(16);
+    return colour;
+  }
+}
+class Particle {
+  constructor(originX, originY) {
+    this.originX = originX;
+    this.originY = originY;
+    this.life = 10;  
+    this.explosivity = 4;
+    this.direction = Math.random() > 0.5 ? 1 : -1;
+    this.colour = '#ffffff';
+  }
+
+  decay(rate) {
+    this.life -= rate;
+  }
+}
 class Camera {
   constructor(x, y) {
     this.lastCanvasWidth = window.innerWidth
@@ -490,7 +582,6 @@ class Camera {
 
     gameContainer.appendChild(this.canvas)
     this.setCanvasSize()
-    this.ctx = this.canvas.getContext("2d")
     this.ctx = this.canvas.getContext("2d");
     this.ctx.font = `${fontSize}px ${fontFamily}`
     this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight)
@@ -517,7 +608,7 @@ class Camera {
     this.ctx.fillStyle = backgroundColour;
     this.ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
     this.drawMap();
-  
+    this.drawParticles();
     if (clientPlayers.length !== 0) {
       for (const client of clientPlayers) {
         if (client.id !== player.id) {
@@ -570,15 +661,25 @@ class Camera {
     for (const index in messages) {
       const msg = messages[index];
       const messageText = msg.message
+      const padding = 10
+      const offset = 100;
       if (msg.id == id) {
         this.ctx.fillStyle = 'black'
         const messageSize = this.ctx.measureText(messageText)
-        console.log(messageSize)
-        const messageY = y-(index*20)-(messageSize.actualBoundingBoxAscent*3)
-        this.ctx.fillRect(x, messageY-(messageSize.actualBoundingBoxAscent/1.5), messageSize.width + 10, messageSize.actualBoundingBoxAscent + (messageSize.actualBoundingBoxAscent/1.5), opacity)
+        // console.log(messageSize)
+        const messageY = y - ((index*((padding*2)+(messageSize.actualBoundingBoxAscent))) - messageSize.actualBoundingBoxAscent*3) - offset
+
+        this.ctx.fillRect(x, messageY-(messageSize.actualBoundingBoxAscent/1.5), messageSize.width + (padding*2), messageSize.actualBoundingBoxAscent + (messageSize.actualBoundingBoxAscent/1.5) + (padding*2), opacity)
         this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.fillText(messageText, x+5, messageY+(messageSize.actualBoundingBoxAscent/1.5));
+        this.ctx.fillText(messageText, x+padding, (messageY+(messageSize.actualBoundingBoxAscent/1.5)) + padding);
       }
+    }
+  }
+
+  drawParticles() {
+    for (let particle of particles) {
+      this.ctx.fillStyle = particle.colour;
+      this.ctx.fillRect(particle.originX+this.x, particle.originY+this.y, particle.life, particle.life);
     }
   }
   

@@ -91,15 +91,19 @@ wss.on('connection', function connection(ws, request, client) {
           type: 'players'
         });
         broadcast(reply)
-      }else if (messageType === 'update_map') {
+      } else if (messageType === 'update_map') {
         const tileInteraction = data.tileInteraction;
-        const tileIndex = data.tileIndex;
+        const tileIndexes = data.tileIndexes;
         switch (tileInteraction) {
           case 'delete':
-            mapData[tileIndex] = 0;
+            for (let tile of tileIndexes) {
+              mapData[tile] = 0;
+            }
             break;
         }
-        broadcast(JSON.stringify({'type':'update_map', data:{index:tileIndex, type:data.tileInteraction, newMapData:mapData}}));
+        broadcast(JSON.stringify({'type':'update_map', data:{index:tileIndexes, type:data.tileInteraction, newMapData:mapData}}));
+      }else if (messageType === 'create_particle') {
+        broadcast(JSON.stringify({'type':'create_particle', data:{x:data.x, y:data.y, rate:data.rate}}));
       } else if (messageType === 'message') {
         broadcast(JSON.stringify(data));
       }
@@ -125,7 +129,8 @@ function randomPlayerColour() {
 function broadcast(data) {
   wss.clients.forEach(function each(client) {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
+      // console.log(client, wss);
+      if (client !== wss) client.send(data);
     }
   });
 }
