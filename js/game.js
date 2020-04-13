@@ -311,8 +311,9 @@ function move(){
     }
     alreadyMoving = true
   } 
-
-  if (activeKeys['f']) {
+  
+  // Destroy on space
+  if (activeKeys[' ']) {
     destroying = true;
   }
 
