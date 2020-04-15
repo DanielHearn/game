@@ -48,8 +48,8 @@ wss.on('connection', function connection(ws, request, client) {
           id: playerID,
           colour: randomPlayerColour(),
           name: data.data.name,
-          x: 75,
-          y: 75,
+          x: 10,
+          y: 2,
           direction: 0
         }
         reply = JSON.stringify({
@@ -147,7 +147,8 @@ function initialiseNewMap() {
   for (let i = 0; i < mapWidth*mapHeight; i ++) {
     let type = 1
     let depth = Math.floor(i / mapWidth);
-    let firstLayer = depth >= 0 && depth < 40;
+    let surface = depth >= 0 && depth < 10;
+    let firstLayer = depth >= 10 && depth < 40;
     let firstSecondBlendLayer = depth > 30 && depth < 40;
     
     let secondLayer = depth >= 40 && depth < 60;
@@ -158,25 +159,27 @@ function initialiseNewMap() {
     
     let fourthLayer = depth >= 80 && depth < 100;
     
-    if (firstLayer) {
+    if(surface) {
+      type = 0;
+    } else if (firstLayer) {
       if (!firstSecondBlendLayer) {
         type = 3;
       } else {
         type = blendTiles(3, 4);
       }
-    }  if (secondLayer) {
+    } else if (secondLayer) {
       if (!secondThirdBlendLayer) {
         type = 4;
       } else {
         type = blendTiles(4, 5);
       }
-    }  if (thirdLayer) {
+    } else if (thirdLayer) {
       if (!thirdFourthBlendLayer) {
         type = 5;
       } else {
         type = blendTiles(5, 6);
       }
-    }  if (fourthLayer) {
+    } else if (fourthLayer) {
         type = 6;
     }
     
