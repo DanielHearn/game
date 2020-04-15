@@ -317,8 +317,10 @@ function move(){
     destroying = true;
   }
 
+  collidingTiles = [];
   if(gameFocused) {
     if (player.x !== newX || player.y !== newY) {
+  
       if (!checkWallCollision(newX, newY, mapWidth, mapHeight) && !checkTileCollision(newX, newY)) {
         camera.x += player.x - newX;
         camera.y += player.y - newY;
@@ -378,7 +380,6 @@ function destroyTile(tile, i, callback) {
 }
 
 function checkTileCollision(newX, newY) {
-  collidingTiles = [];
   let playerTilePositionX = Math.floor(newX/gameMap.tileSize);
   let playerTilePositionY = Math.floor(newY/gameMap.tileSize);
   let topLCorner = playerTilePositionX + playerTilePositionY * gameMap.width;
